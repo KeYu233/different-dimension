@@ -1,9 +1,9 @@
 ---
 layout: default
-title: 我的博客首页
+title: Hi!!!我是柯宇！
 ---
 
-# 最新文章
+# 异乡之翼
 
 {% for post in site.posts %}
 - [{{ post.title }}]({{ post.url }}) ({{ post.date | date: "%Y-%m-%d" }})
