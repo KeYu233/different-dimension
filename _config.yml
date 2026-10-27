@@ -1,3 +1,7 @@
 theme: jekyll-theme-cayman
 future: true
 timezone: Asia/Shanghai
+# 的网站基础URL（不含仓库名）
+url: "https://keyu233.github.io"
+# 项目路径（仓库名，必须以 / 开头）
+baseurl: "/different-dimension"
