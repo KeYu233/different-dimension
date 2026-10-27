@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: "头图是古明地觉"
 date: 2026-10-28 00:30:00 +0800
 ---

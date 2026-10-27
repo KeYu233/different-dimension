@@ -83,3 +83,25 @@
     font-size: 1.3rem;
   }
 }
+
+/* 文章底部返回按钮（写在 _layouts/post.html 里，不进正文，所以不会出现在首页预览） */
+.post-back {
+  margin: 2.5rem 0 0.5rem;
+}
+
+.post-back .btn-back {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  background-color: #159957;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.post-back .btn-back:hover {
+  background-color: #127a46;
+  color: #fff;
+  text-decoration: none;
+}
