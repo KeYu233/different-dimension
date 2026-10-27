@@ -1,0 +1,27 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* 头图：古明地觉（tpic.png） */
+.page-header {
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(180deg, rgba(8, 10, 18, 0.20) 0%, rgba(8, 10, 18, 0.60) 100%),
+    url("{{ '/tpic.png' | relative_url }}");
+  background-size: cover;
+  background-position: center 38%;
+  background-repeat: no-repeat;
+}
+
+/* 图片上压白字，加一点阴影保证可读 */
+.page-header .project-name,
+.page-header .project-tagline {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8), 0 0 2px rgba(0, 0, 0, 0.6);
+}
+
+@media screen and (max-width: 42em) {
+  .page-header {
+    background-position: center 28%;
+  }
+}
