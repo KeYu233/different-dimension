@@ -14,3 +14,12 @@ title: Hi!!!我是柯宇！
   </li>
 {% endfor %}
 </ul>
+
+<h2 class="sec-title">作品演示</h2>
+
+<ul class="demo-list">
+  <li class="demo-item">
+    <a class="demo-link" href="{{ '/jiejiaoxian.html' | relative_url }}" target="_blank" rel="noopener">立体截交线 · 三维交互演示 ↗</a>
+    <p class="demo-desc">单个 HTML 文件，Three.js 全部内联、断网也能跑：切换立体、拖动截平面，实时看截交线与三视图。</p>
+  </li>
+</ul>

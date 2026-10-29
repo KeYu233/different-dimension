@@ -105,3 +105,45 @@
   color: #fff;
   text-decoration: none;
 }
+
+/* 首页「作品演示」区 */
+.main-content .sec-title {
+  margin: 3rem 0 0.8rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid #eff0f1;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2f3a41;
+}
+
+.main-content .demo-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.demo-item {
+  padding: 1rem 1.1rem;
+  background: #f7f9fb;
+  border: 1px solid #e6ecf2;
+  border-radius: 8px;
+}
+
+.demo-item .demo-link {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #155799;
+  text-decoration: none;
+}
+
+.demo-item .demo-link:hover {
+  color: #159957;
+  text-decoration: underline;
+}
+
+.demo-item .demo-desc {
+  margin: 0.45rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #5b666c;
+}
