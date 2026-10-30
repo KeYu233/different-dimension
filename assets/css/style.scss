@@ -26,31 +26,38 @@
   }
 }
 
-/* 首页文章列表 */
+/* 首页文章列表：卡片式 */
 .main-content .post-list {
-  margin: 1.2rem 0 2rem;
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.4rem 0 2.5rem;
   padding-left: 0;
   list-style: none;
 }
 
 .post-list .post-item {
-  padding: 1.35rem 0;
-  border-bottom: 1px solid #eff0f1;
+  padding: 1.1rem 1.25rem 1.2rem;
+  background: #ffffff;
+  border: 1px solid #e5e9ef;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04),
+              0 10px 24px -16px rgba(17, 24, 39, 0.22);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
 }
 
-.post-list .post-item:first-child {
-  padding-top: 0.5rem;
-}
-
-.post-list .post-item:last-child {
-  border-bottom: 0;
+.post-list .post-item:hover {
+  transform: translateY(-2px);
+  border-color: #d6dde7;
+  box-shadow: 0 2px 6px rgba(17, 24, 39, 0.06),
+              0 20px 38px -20px rgba(17, 24, 39, 0.3);
 }
 
 .post-list .post-item-title {
-  margin: 0 0 0.4rem;
-  font-size: 1.55rem;
+  margin: 0 0 0.45rem;
+  font-size: 1.45rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
   color: #14568f;
 }
 
@@ -66,21 +73,30 @@
 
 .post-list .post-item-meta {
   margin: 0 0 0.55rem;
-  font-size: 0.84rem;
-  color: #96a0a8;
+  font-size: 0.82rem;
+  color: #8e9aa7;
   letter-spacing: 0.02em;
 }
 
 .post-list .post-item-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.97rem;
   line-height: 1.75;
   color: #5b666c;
 }
 
 @media screen and (max-width: 42em) {
+  .post-list .post-item {
+    padding: 1rem 1.05rem 1.05rem;
+  }
+
   .post-list .post-item-title {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
 }
 
