@@ -163,3 +163,22 @@
   line-height: 1.7;
   color: #5b666c;
 }
+
+/* 文章底部评论区（Giscus） */
+.comments {
+  margin: 2.5rem 0 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eff0f1;
+}
+
+.main-content .comments-title {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2f3a41;
+}
+
+.comments .giscus,
+.comments .giscus-frame {
+  width: 100%;
+}
