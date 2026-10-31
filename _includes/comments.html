@@ -1,19 +1,10 @@
-{% if site.giscus.category_id and site.giscus.category_id != "" %}
+{% if site.utterances.repo and site.utterances.repo != "" %}
 <section class="comments" id="comments">
   <h2 class="comments-title">评论</h2>
-  <script src="https://giscus.app/client.js"
-          data-repo="{{ site.giscus.repo }}"
-          data-repo-id="{{ site.giscus.repo_id }}"
-          data-category="{{ site.giscus.category }}"
-          data-category-id="{{ site.giscus.category_id }}"
-          data-mapping="{{ site.giscus.mapping | default: 'pathname' }}"
-          data-strict="0"
-          data-reactions-enabled="1"
-          data-emit-metadata="0"
-          data-input-position="bottom"
-          data-theme="{{ site.giscus.theme | default: 'light' }}"
-          data-lang="{{ site.giscus.lang | default: 'zh-CN' }}"
-          data-loading="lazy"
+  <script src="https://utteranc.es/client.js"
+          repo="{{ site.utterances.repo }}"
+          issue-term="{{ site.utterances.issue_term | default: 'pathname' }}"
+          theme="{{ site.utterances.theme | default: 'github-light' }}"
           crossorigin="anonymous"
           async>
   </script>

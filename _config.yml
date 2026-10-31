@@ -6,18 +6,11 @@ url: "https://keyu233.github.io"
 # 项目路径（仓库名，必须以 / 开头）
 baseurl: "/different-dimension"
 
-# —————————— Giscus 评论（文章页底部）——————————
-# 启用需要三步（都只能由人在浏览器里完成）：
-#   1. 仓库 Settings → General → Features 勾选 Discussions
-#   2. 安装并授权 https://github.com/apps/giscus 到本仓库
-#   3. 打开 https://giscus.app/zh-CN 填仓库名 KeYu233/different-dimension，
-#      选好 Discussion 分类，复制它给出的 repo-id 与 category-id 填到下面
-# category_id 为空时，文章底部不渲染评论区（页面不会报错）
-giscus:
+# —————————— 评论（utterances）——————————
+# 前置只需一步：安装并授权 https://github.com/apps/utterances 到本仓库
+# 每条评论 = 仓库里的一个 Issue，标题按 pathname 映射，首次有人评论时自动创建
+# 不需要 repo-id / category-id（这也是它比 giscus 省事的地方）
+utterances:
   repo: "KeYu233/different-dimension"
-  repo_id: "R_kgDOVZZbiA"
-  category: "General"
-  category_id: "DIC_kwDOVZZbiM4DKFR8"
-  mapping: "pathname"
-  lang: "zh-CN"
-  theme: "light"
+  issue_term: "pathname"
+  theme: "github-light"
