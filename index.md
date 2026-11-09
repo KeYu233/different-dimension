@@ -46,4 +46,8 @@ title: Hi!!!我是柯宇！
     <a class="demo-link" href="{{ '/math-bank/' | relative_url }}" target="_blank" rel="noopener">高等数学题库 · 离线 LaTeX 组卷 ↗</a>
     <p class="demo-desc">第一至四章题库，支持检索、随机组卷、LaTeX 公式和 Word 导出；题库数据保存在浏览器本地。</p>
   </li>
+  <li class="demo-item">
+    <a class="demo-link" href="{{ '/reader/' | relative_url }}">书页 · 漫画阅读器 ↗</a>
+    <p class="demo-desc">《謎狐怪童》全三卷扫描版在线翻阅：双页对开、日漫右起、翻页时纸张绕书脊卷过去；进度和书签记在你自己浏览器里。</p>
+  </li>
 </ul>
