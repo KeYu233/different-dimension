@@ -338,3 +338,17 @@
     width: 100%;
   }
 }
+
+/* 首页第二个栏目大标题（「无心漫谈」）：和上一栏拉开距离，读成另起一栏 */
+.main-content h1:not(:first-child) {
+  margin-top: 3.6rem;
+}
+
+/* 栏目页：还没有文章时的占位卡片 */
+.main-content .post-list .post-item-empty {
+  color: #8e9aa7;
+  font-size: 0.95rem;
+  background: #f7f9fb;
+  border-style: dashed;
+  box-shadow: none;
+}

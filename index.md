@@ -21,6 +21,24 @@ title: Hi!!!我是柯宇！
 {% endfor %}
 </ul>
 
+# 无心漫谈
+
+<h2 class="sec-title">篇目</h2>
+
+<p class="column-intro"><a class="column-more" href="{{ '/wuxin-mantan/' | relative_url }}">进入栏目 →</a></p>
+
+<ul class="post-list">
+{% for post in site.posts %}
+  {% if post.column == '无心漫谈' %}
+  <li class="post-item">
+    <h2 class="post-item-title"><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h2>
+    <p class="post-item-meta">{{ post.date | date: "%Y-%m-%d" }}</p>
+    <p class="post-item-excerpt">{{ post.content | strip_html | normalize_whitespace | strip | truncate: 79, "…" }}</p>
+  </li>
+  {% endif %}
+{% endfor %}
+</ul>
+
 <h2 class="sec-title">随笔</h2>
 
 <ul class="post-list">

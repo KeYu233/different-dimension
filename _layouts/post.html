@@ -5,12 +5,12 @@ layout: default
 {% if page.column %}
 <p class="column-kicker">
   <a href="{{ page.column_url | default: '/' | relative_url }}">《{{ page.column }}》</a>
-  <span class="column-kicker-sep">·</span>
-  <span>{{ page.chapter_label }}</span>
+  {% if page.chapter_label %}<span class="column-kicker-sep">·</span>
+  <span>{{ page.chapter_label }}</span>{% endif %}
 </p>
 {% endif %}
 
-{% if page.chapter_label %}
+{% if page.column or page.chapter_label %}
 <div class="chapter-body">
 {{ content }}
 </div>
