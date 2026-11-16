@@ -23,7 +23,7 @@ title: Hi!!!我是柯宇！
 
 <h2 class="sec-title">连载 · 《电控学习笔记》</h2>
 
-<p class="column-intro">STM32 的输入输出、时钟与串口，从寄存器里的两只 MOS 管一路做到能跑的实验。<a class="column-more" href="{{ '/diankong-biji/' | relative_url }}">进入栏目 →</a></p>
+<p class="column-intro">长期坑，不定期更新，个人笔记。<a class="column-more" href="{{ '/diankong-biji/' | relative_url }}">进入栏目 →</a></p>
 
 <ul class="post-list">
   <li class="post-item">

@@ -4,6 +4,8 @@ title: 《电控学习笔记》
 permalink: /diankong-biji/
 ---
 
+<p class="column-intro">长期坑，不定期更新，个人笔记。</p>
+
 <h2 class="chapter-heading">篇目<span class="chapter-count">共 3 篇</span></h2>
 
 <ul class="post-list">
