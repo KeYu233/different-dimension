@@ -57,6 +57,10 @@ title: Hi!!!我是柯宇！
 
 <ul class="demo-list">
   <li class="demo-item">
+    <a class="demo-link" href="{{ '/stm32/' | relative_url }}" target="_blank" rel="noopener">STM32 入门三讲 · GPIO / 时钟 / 串口 ↗</a>
+    <p class="demo-desc">三篇带侧栏目录的图文长文，从端口里的两只 MOS 管讲到推挽与开漏、从四种时钟源讲到 PLL 拉出 72MHz、再讲到一帧串口数据和 USB 转 TTL 接线；配 CubeMX 截图、面包板实物与两段示波器录屏。</p>
+  </li>
+  <li class="demo-item">
     <a class="demo-link" href="{{ '/jiejiaoxian.html' | relative_url }}" target="_blank" rel="noopener">立体截交线 · 三维交互演示 ↗</a>
     <p class="demo-desc">单个 HTML 文件，Three.js 全部内联、断网也能跑：切换立体、拖动截平面，实时看截交线与三视图。</p>
   </li>

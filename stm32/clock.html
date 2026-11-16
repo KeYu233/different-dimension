@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>时钟系统 · STM32 学习笔记</title>
+<style>
+:root{
+  --ink:#16202a;
+  --muted:#5d6b78;
+  --faint:#8b98a3;
+  --line:#e4e8eb;
+  --bg:#fcfcfb;
+  --card:#ffffff;
+  --accent:#16607a;
+  --accent-soft:#eaf2f5;
+  --warn:#9a5a12;
+  --warn-soft:#fdf5e8;
+  --code-bg:#f7f8f9;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.78;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px}
+.layout{display:grid; grid-template-columns:206px minmax(0,1fr); gap:56px; align-items:start}
+main{max-width:780px; min-width:0; padding-bottom:40px}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 40px; border-bottom:1px solid var(--line)}
+.kicker{
+  font-size:12px; letter-spacing:.18em; color:var(--faint);
+  text-transform:uppercase; margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(28px,4.2vw,40px); line-height:1.3; font-weight:600;
+  letter-spacing:.01em; margin:0 0 16px;
+}
+.lede{font-size:17px; color:var(--muted); max-width:660px; margin:0 0 26px}
+.facts{display:flex; flex-wrap:wrap; gap:10px 28px; font-size:13.5px; color:var(--muted)}
+.facts b{color:var(--ink); font-weight:600}
+.hero-note{margin-top:22px; font-size:12.5px; color:var(--faint)}
+.hero-note a{color:var(--faint); border-bottom:1px solid var(--line)}
+.hero-note a:hover{color:var(--accent); text-decoration:none; border-bottom-color:var(--accent)}
+
+/* ---------- toc ---------- */
+.toc{position:sticky; top:26px; padding-top:56px; font-size:13.5px}
+.toc-title{font-size:11px; letter-spacing:.16em; color:var(--faint); margin-bottom:12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--line)}
+.toc li a{
+  display:block; padding:5px 0 5px 14px; margin-left:-1px;
+  border-left:2px solid transparent; color:var(--muted); line-height:1.5;
+}
+.toc li a:hover{color:var(--ink); text-decoration:none}
+.toc li a.active{color:var(--accent); border-left-color:var(--accent); font-weight:500}
+.toc li.sub a{padding-left:26px; font-size:12.8px; color:#7b8894}
+
+/* ---------- sections ---------- */
+main > section{padding-top:64px; scroll-margin-top:20px}
+.secnum{
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:12px; letter-spacing:.14em; color:var(--accent); margin-bottom:10px;
+}
+h2{font-size:24px; font-weight:600; margin:0 0 8px; letter-spacing:.01em}
+h3{font-size:17.5px; font-weight:600; margin:40px 0 10px}
+h3::before{content:""; display:inline-block; width:14px; height:1px; background:var(--accent);
+  vertical-align:middle; margin-right:10px; transform:translateY(-2px)}
+h4{font-size:15px; font-weight:600; margin:24px 0 6px; color:var(--ink)}
+p{margin:12px 0}
+.sub{color:var(--muted); font-size:14.5px; margin-top:0}
+ul,ol{margin:12px 0; padding-left:22px}
+li{margin:6px 0}
+li::marker{color:var(--faint)}
+strong{font-weight:600}
+code{
+  font-family:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono",monospace;
+  font-size:.9em; background:#f1f3f4; padding:1px 5px; border-radius:4px;
+  color:#0f3d4d;
+}
+
+/* ---------- figures ---------- */
+figure{margin:26px 0}
+figure img{
+  display:block; width:100%; height:auto; background:#fff;
+  border:1px solid var(--line); border-radius:8px; cursor:zoom-in;
+}
+figure.small img{max-width:520px; margin:0 auto}
+figure.tiny img{max-width:400px; margin:0 auto}
+figcaption{
+  font-size:12.8px; color:var(--faint); text-align:center;
+  margin-top:10px; line-height:1.6;
+}
+.figrow{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:26px 0; align-items:end}
+.figrow figure{margin:0}
+.figrow figcaption{font-size:12.5px}
+.figrow.wide{grid-template-columns:1.35fr 1fr}
+.figrow.narrow{grid-template-columns:1fr 1.35fr}
+.figrow figure img{width:100%}
+
+/* ---------- video ---------- */
+figure.video video{
+  display:block; width:100%; height:auto; max-height:540px; object-fit:contain;
+  background:#0f1519; border:1px solid var(--line); border-radius:8px;
+}
+figure.video.portrait video{max-width:420px; margin:0 auto}
+figure.video figcaption{font-size:12.8px}
+.videotag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-weight:600; font-size:13px; color:var(--muted); border-bottom:1px solid #cfd6db;
+  white-space:nowrap; letter-spacing:.02em}
+tbody tr:hover{background:#fafbfb}
+td code{background:none; padding:0; color:inherit; font-size:13.2px}
+.tnum{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ---------- cards ---------- */
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:22px 0}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:18px 20px; font-size:14.5px; line-height:1.7;
+}
+.card h4{margin:0 0 6px; font-size:14.5px}
+.card p{margin:0; color:var(--muted); font-size:14px}
+.card .tag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+.card .tag.warn{color:var(--warn); background:var(--warn-soft)}
+
+/* ---------- callout ---------- */
+.note{
+  margin:24px 0; padding:14px 18px; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 8px 8px 0; font-size:14.5px;
+}
+.note.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.note p{margin:0}
+.note p + p{margin-top:8px}
+.note .lbl{font-weight:600; margin-right:2px; color:var(--accent)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- code ---------- */
+pre{
+  margin:20px 0; padding:16px 18px; background:var(--code-bg);
+  border:1px solid var(--line); border-radius:8px; overflow-x:auto;
+  font-size:13.2px; line-height:1.7;
+}
+pre code{background:none; padding:0; font-size:inherit; color:#22303a}
+.k{color:#8b3fa8}
+.f{color:#16607a}
+.n{color:#a05c11}
+.c{color:#8b98a3; font-style:normal}
+.m{color:#2b6b4f}
+
+/* ---------- misc ---------- */
+.divider{height:1px; background:var(--line); margin:56px 0 0}
+.kv{display:grid; grid-template-columns:132px 1fr; gap:4px 18px; font-size:14.5px; margin:18px 0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+footer{
+  border-top:1px solid var(--line); margin-top:80px; padding:28px 0 60px;
+  font-size:13px; color:var(--faint);
+}
+footer p{margin:4px 0}
+
+/* ---------- lightbox ---------- */
+.lb{
+  position:fixed; inset:0; background:rgba(16,24,30,.9); display:none;
+  align-items:center; justify-content:center; padding:4vw; z-index:50; cursor:zoom-out;
+}
+.lb.open{display:flex}
+.lb img{max-width:100%; max-height:100%; background:#fff; border-radius:6px}
+
+/* ---------- responsive ---------- */
+@media (max-width:960px){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .toc{display:none}
+  .hero{padding:44px 0 30px}
+  .wrap{padding:0 20px}
+  main > section{padding-top:48px}
+  .grid,.grid.three,.figrow{grid-template-columns:1fr}
+  .figrow{gap:26px}
+  h2{font-size:21px}
+  .kv{grid-template-columns:100px 1fr}
+}
+@media print{
+  .toc,.lb{display:none}
+  body{background:#fff}
+  .hero{padding-top:0}
+  main > section{page-break-inside:auto}
+  figure{page-break-inside:avoid}
+}
+
+/* —— 博客返回入口（整进「异乡之翼」时加的，非原文） —— */
+.gf-home{position:fixed; top:14px; right:16px; z-index:60; padding:6px 14px; border-radius:999px;
+  border:1px solid var(--line); background:rgba(255,255,255,.92); color:var(--muted);
+  font-size:12.5px; letter-spacing:.04em; box-shadow:0 2px 10px rgba(22,32,42,.08);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.gf-home:hover{color:var(--accent); border-color:var(--accent); background:#fff}
+@media (max-width:640px){.gf-home{top:10px; right:10px; padding:5px 11px; font-size:12px}}
+@media print{.gf-home{display:none}}</style>
+</head>
+<body>
+
+<a class="gf-home" href="../">&larr; 异乡之翼</a>
+
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">STM32 · 嵌入式学习笔记 · 02</div>
+    <h1>时钟系统</h1>
+    <p class="lede">单片机要有节拍才会动，节拍来得快慢不同，同一段代码跑出来的速度也不同。下面把时钟树按树根、树干、树枝、树叶四层拆开，再用一个实验把 HCLK 从 8MHz 提到 72MHz，两段录屏对比。</p>
+    <div class="facts">
+      <span><b>结构</b> 树根 → 树干 → 树枝 → 树叶</span>
+      <span><b>时钟源</b> HSI 8MHz · HSE 8MHz · LSI 40kHz · LSE 32.768kHz</span>
+      <span><b>实验</b> HCLK 8MHz → 72MHz</span>
+    </div>
+    <div class="hero-note">整理自《时钟系统_基础知识》《时钟系统_实验》两份笔记，附两段实验录屏 · 上一篇：<a href="index.html">GPIO 的输入与输出</a></div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+<aside class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#why">一、为什么需要时钟</a></li>
+    <li class="sub"><a href="#logic">两种数字电路</a></li>
+    <li class="sub"><a href="#beat">时钟就是节拍</a></li>
+    <li><a href="#compare">二、和电脑对照着看</a></li>
+    <li><a href="#tree">三、时钟树的四层</a></li>
+    <li><a href="#root">四、树根：四种时钟源</a></li>
+    <li class="sub"><a href="#xtal">外部晶振长什么样</a></li>
+    <li><a href="#sysclk">五、树干：SYSCLK 与 PLL</a></li>
+    <li><a href="#branches">六、树枝：分频器</a></li>
+    <li><a href="#leaves">七、树叶：模块</a></li>
+    <li><a href="#exp">八、实验：8MHz 到 72MHz</a></li>
+    <li class="sub"><a href="#exp8">第一步，8MHz</a></li>
+    <li class="sub"><a href="#exp72">第二步，72MHz</a></li>
+    <li class="sub"><a href="#result">两次对比</a></li>
+    <li><a href="#quickref">九、速查</a></li>
+  </ol>
+</aside>
+
+<main>
+
+<!-- ================= 01 ================= -->
+<section id="why">
+  <div class="secnum">01 / WHY</div>
+  <h2>为什么需要时钟</h2>
+  <p class="sub">数字电路分两类：一类随输入变，一类要等时钟脉冲。单片机里的模块属于后一类。</p>
+
+  <h3 id="logic">两种数字电路</h3>
+  <p><strong>组合逻辑</strong>由与门、或门、非门搭成，没有记忆元件。输入一变，输出跟着变，不需要谁来打拍子。</p>
+  <p><strong>时序逻辑</strong>里含触发器这类记忆元件。触发器看的是边沿，不是电平：CP 端来一个脉冲，状态才更新一次。</p>
+
+  <figure>
+    <img src="assets/clock/logic.png" alt="组合逻辑电路与时序逻辑电路对比，时序逻辑的 CP 端接时钟脉冲">
+    <figcaption>左边组合逻辑，右边时序逻辑。红框里是 CP（Clock Pulse）输入端，没有脉冲，右边这半个电路不动。</figcaption>
+  </figure>
+
+  <h3 id="beat">时钟就是节拍</h3>
+  <p>单片机里的每个模块（GPIO、定时器、串口、ADC）内部都有寄存器，寄存器是记忆元件，所以<strong>它们全都属于时序逻辑</strong>。要让它们工作，就得把时钟送进去。</p>
+
+  <figure>
+    <img src="assets/clock/clock-to-modules.png" alt="时钟信号通过总线被送到每一个模块">
+    <figcaption>同一路时钟经总线分发给各个模块。红色箭头是时钟的走向，蓝色波形是模块自己处理的数据。</figcaption>
+  </figure>
+
+  <div class="note">
+    <p><span class="lbl">频率：</span>每秒多少个节拍。8MHz 就是每秒八百万拍，拍子快，电路就快。</p>
+  </div>
+</section>
+
+<!-- ================= 02 ================= -->
+<section id="compare">
+  <div class="secnum">02 / COMPARE</div>
+  <h2>和电脑对照着看</h2>
+  <p class="sub">单片机的内部结构和一台电脑几乎一一对应，先看这张对照。</p>
+
+  <figure>
+    <img src="assets/clock/cpu-vs-mcu.png" alt="电脑结构与 STM32 内部结构对照：主板对总线矩阵，CPU 对 Cortex-M3，硬盘对 Flash，内存对 RAM">
+    <figcaption>左边是电脑，右边是 STM32F103。CPU、内存、硬盘、各种外设的位置关系几乎一样。</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>电脑</th><th>STM32</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td>主板</td><td>总线矩阵</td><td>所有部件互连的地方</td></tr>
+      <tr><td>CPU</td><td>Cortex-M3 内核</td><td>执行代码</td></tr>
+      <tr><td>硬盘</td><td>Flash</td><td>存程序，掉电不丢</td></tr>
+      <tr><td>内存条</td><td>RAM</td><td>存运行时的数据，掉电即失</td></tr>
+      <tr><td>PCIe 插槽</td><td>AHB 总线</td><td>连高速设备的主干</td></tr>
+      <tr><td>PCIe 转 USB 板卡</td><td>APB2 / APB1 转换桥</td><td>把高速总线转成低速外设总线</td></tr>
+      <tr><td>USB 3.0 Hub</td><td>APB2 总线</td><td>挂中高速外设</td></tr>
+      <tr><td>USB 2.0 Hub</td><td>APB1 总线</td><td>挂低速外设</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>叫总线就有带宽上限，STM32F103 这三条各有各的数：</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>总线</th><th>上限</th><th>在时钟树上的位置</th></tr></thead>
+    <tbody>
+      <tr><td>AHB</td><td class="tnum">72 MHz</td><td>直连内核、Flash、RAM、DMA</td></tr>
+      <tr><td>APB1</td><td class="tnum">36 MHz</td><td>由 AHB 经转换桥分出，挂低速外设</td></tr>
+      <tr><td>APB2</td><td class="tnum">72 MHz</td><td>由 AHB 经转换桥分出，挂高速外设</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <p><span class="lbl">APB1 的上限：</span>只有 AHB 的一半。所以后面把 SYSCLK 拉到 72MHz 时，APB1 必须除以 2。</p>
+  </div>
+</section>
+
+<!-- ================= 03 ================= -->
+<section id="tree">
+  <div class="secnum">03 / TREE</div>
+  <h2>时钟树的四层</h2>
+  <p class="sub">时钟从产生到送达，中间要经过加工、运算和分配。这条链路长得像一棵树，所以叫时钟树。</p>
+
+  <figure>
+    <img src="assets/clock/tree.png" alt="完整的 STM32 时钟树，左侧为高速树，右侧为低速树">
+    <figcaption>STM32F103 的完整时钟树。中间这棵大树给大部分模块供时钟，右边那棵小树只伺候 RTC 和独立看门狗。</figcaption>
+  </figure>
+
+  <dl class="kv">
+    <dt>树根 · 时钟源</dt><dd>信号从哪来：HSI、HSE、LSI、LSE，以及它们倍频出来的 PLL 输出。</dd>
+    <dt>树干 · SYSCLK</dt><dd>系统时钟，全片的基准节拍，最高 72MHz。</dd>
+    <dt>树枝 · 分频器</dt><dd>AHB、APB1、APB2 三处分频，把树干切成不同频率分给不同总线。</dd>
+    <dt>树叶 · 模块</dt><dd>GPIO、定时器、串口、ADC 等等，各自收下属于自己的那一拍。</dd>
+  </dl>
+</section>
+
+<!-- ================= 04 ================= -->
+<section id="root">
+  <div class="secnum">04 / SOURCE</div>
+  <h2>树根：四种时钟源</h2>
+  <p class="sub">按“高速 / 低速”和“内部 / 外部”两个维度交叉，正好四种。</p>
+
+  <figure>
+    <img src="assets/clock/sources.png" alt="四种时钟源矩阵：HSI、HSE、LSI、LSE 的命名规则">
+    <figcaption>名字是拼出来的：HS = High Speed，LS = Low Speed，I = Internal，E = External。</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>时钟源</th><th>频率</th><th>来源</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><strong>HSI</strong> 高速内部</td><td class="tnum">8 MHz</td><td>芯片内置 RC 振荡器</td><td>上电默认，不用外接</td></tr>
+      <tr><td><strong>HSE</strong> 高速外部</td><td class="tnum">4 ~ 16 MHz</td><td>外接晶振（板上是 8MHz）</td><td>经 PLL 倍频到 72MHz 的主路</td></tr>
+      <tr><td><strong>LSI</strong> 低速内部</td><td class="tnum">40 kHz</td><td>芯片内置</td><td>独立看门狗、RTC 备选</td></tr>
+      <tr><td><strong>LSE</strong> 低速外部</td><td class="tnum">32.768 kHz</td><td>外接晶振</td><td>RTC 实时时钟</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 id="xtal">外部晶振长什么样</h3>
+  <p>内部时钟源不用外接元件，成本低，精度差（RC 振荡受温度影响）。外部时钟源要外接晶振，精度高，成本也高一点。HSE 和 LSE 都属于后者。</p>
+
+  <div class="figrow">
+    <figure>
+      <img src="assets/clock/xtal-pins.png" alt="HSE 与 LSE 分别接到芯片的 OSC_IN、OSC_OUT 引脚">
+      <figcaption>晶振接在 OSC_IN / OSC_OUT 两端，各配两只小电容到地</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/clock/board-xtal.png" alt="STM32F103C8T6 最小系统板上的两颗晶振">
+      <figcaption>最小系统板上的两颗：8MHz 给 HSE，黑色那颗 32.768kHz 给 LSE</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= 05 ================= -->
+<section id="sysclk">
+  <div class="secnum">05 / TRUNK</div>
+  <h2>树干：SYSCLK 与 PLL</h2>
+  <p class="sub">树根出来的信号一般太慢，要先加工一次，这活儿归锁相环 PLL。</p>
+
+  <figure class="small">
+    <img src="assets/clock/sysclk.png" alt="系统时钟 SYSCLK 位于树干中间，最高 72MHz，可由 HSI、HSE 或 PLL 提供">
+    <figcaption>系统时钟 SYSCLK 就是树干本身，上限 72MHz</figcaption>
+  </figure>
+
+  <p>SYSCLK 有三个来源：树根处的 HSI、HSE，或者经过倍频的 PLL 输出。想让 8MHz 的晶振跑出 72MHz，只能走 PLL。</p>
+  <p>PLL 前面是一个三选一的选择器：</p>
+
+  <figure class="tiny">
+    <img src="assets/clock/pll-mux.png" alt="锁相环输入选择器：HSI 除以 2、HSE、HSE 除以 2 三路可选">
+    <figcaption>PLL 输入三选一：HSI/2、HSE、HSE/2</figcaption>
+  </figure>
+
+  <div class="note">
+    <p><span class="lbl">72 是怎么来的：</span>HSE 8MHz 乘倍频系数 9 得 72MHz。实验里那个倍频系数填的就是 9。</p>
+  </div>
+</section>
+
+<!-- ================= 06 ================= -->
+<section id="branches">
+  <div class="secnum">06 / BRANCH</div>
+  <h2>树枝：分频器</h2>
+  <p class="sub">72MHz 的树干不能直接喂给所有外设，得往下分。分频器做的是除法。</p>
+
+  <figure class="small">
+    <img src="assets/clock/divider.png" alt="分频器示意：SYSCLK 10MHz 经过除以 2 变成 5MHz">
+    <figcaption>除以 2 就是频率减半：进来 10MHz，出去 5MHz</figcaption>
+  </figure>
+
+  <p>第一根大树枝是 AHB。SYSCLK 过 AHB 分频器之后得到 <strong>HCLK</strong>，最高 72MHz；HCLK 再往下分出 APB1 和 APB2 两根树杈。</p>
+
+  <figure class="small">
+    <img src="assets/clock/hclk-pclk.png" alt="HCLK 分频出 PCLK1 与 PCLK2">
+    <figcaption>SYSCLK → AHB 分频 → HCLK → APB1/APB2 分频 → PCLK1/PCLK2，每一级都标着自己的上限</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>节点</th><th>来自</th><th>上限</th><th>喂给谁</th></tr></thead>
+    <tbody>
+      <tr><td><strong>SYSCLK</strong></td><td>HSI / HSE / PLL</td><td class="tnum">72 MHz</td><td>整棵树的起点</td></tr>
+      <tr><td><strong>HCLK</strong></td><td>SYSCLK 经 AHB 分频</td><td class="tnum">72 MHz</td><td>内核、AHB 总线、内存、DMA</td></tr>
+      <tr><td><strong>PCLK1</strong></td><td>HCLK 经 APB1 分频</td><td class="tnum">36 MHz</td><td>APB1 上的外设</td></tr>
+      <tr><td><strong>PCLK2</strong></td><td>HCLK 经 APB2 分频</td><td class="tnum">72 MHz</td><td>APB2 上的外设</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note warn">
+    <p><span class="lbl">低速树是另一棵树：</span>LSI 和 LSE 不走这条主干，单独供给 RTC 和独立看门狗 IWDG。实时时钟图的是准，32.768kHz 拿 2 的 15 次方一除正好是一秒。</p>
+  </div>
+</section>
+
+<!-- ================= 07 ================= -->
+<section id="leaves">
+  <div class="secnum">07 / LEAF</div>
+  <h2>树叶：模块</h2>
+  <p class="sub">信号走完这一路，最后落到一个个具体的外设上。</p>
+
+  <div class="grid">
+    <div class="card">
+      <span class="tag">APB2 · 最高 72MHz</span>
+      <h4>挂在 APB2 上的</h4>
+      <p>GPIOA / GPIOB / GPIOC、EXTI、TIM1、SPI1、USART1、ADC1 / ADC2。</p>
+    </div>
+    <div class="card">
+      <span class="tag">APB1 · 最高 36MHz</span>
+      <h4>挂在 APB1 上的</h4>
+      <p>TIM2 / TIM3 / TIM4、USART2 / USART3、SPI2、I2C1 / I2C2、bxCAN、USB 2.0 FS。</p>
+    </div>
+  </div>
+
+  <p>“给某个外设配时钟”，就是在树上挑一条路，并定下每一级除多少。CubeMX 的时钟页因此是连动的：改一个分频系数，下游一串频率跟着变。</p>
+</section>
+
+<!-- ================= 08 ================= -->
+<section id="exp">
+  <div class="secnum">08 / EXPERIMENT</div>
+  <h2>实验：8MHz 到 72MHz</h2>
+  <p class="sub">同一段点灯代码，先让 HCLK 跑 8MHz，再开到 72MHz，看灯闪得快了多少。</p>
+  <p>盯住 HCLK，是因为 AHB 这根最粗的树枝上挂着 Cortex-M3 内核，代码都由内核执行：<strong>HCLK 多快，代码就跑多快</strong>。</p>
+
+  <h3 id="exp8">第一步，8MHz</h3>
+  <p>新建工程打开时钟页，HCLK 默认 8MHz（来自内部 HSI），即每秒 800 万条指令，实测会略快一点。</p>
+
+  <figure>
+    <img src="assets/clock/cube-hclk8.png" alt="CubeMX 时钟页中 HCLK 显示 8MHz">
+    <figcaption>默认状态：HCLK = 8MHz，下游的 FCLK、PCLK1 也都是 8MHz</figcaption>
+  </figure>
+
+  <p>找到 PC13（板载 LED 就在这个脚上），设为 <code>GPIO_Output</code>，模式选开漏，最大输出速度选低速，初始电平选高。开漏配初始高电平，上电时灯是灭的。</p>
+
+  <div class="figrow wide">
+    <figure>
+      <img src="assets/clock/cube-pc13.png" alt="在芯片引脚图上把 PC13 设为 GPIO_Output">
+      <figcaption>引脚图上点 PC13，选 GPIO_Output</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/clock/cube-pc13-cfg.png" alt="PC13 的配置：Output Open Drain、High、Low">
+      <figcaption>Output Open Drain / 初始电平 High / 速度 Low</figcaption>
+    </figure>
+  </div>
+
+  <p>代码里没用 <code>HAL_Delay</code>，改用空循环耗时间，耗时就跟主频挂上了钩：主频越高，同样次数的循环越快。</p>
+
+<pre><code>while (1)
+{
+    uint32_t i;
+
+    // 点亮板载 LED
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+    // 空转 100 万次（8MHz 下约 1 秒）
+    for (i = 0; i &lt; 1000000; i++);
+
+    // 熄灭板载 LED
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+
+    // 同样再空转 100 万次
+    for (i = 0; i &lt; 1000000; i++);
+}</code></pre>
+
+  <figure class="video">
+    <video controls preload="metadata" playsinline poster="assets/video/clk-8mhz-poster.jpg">
+      <source src="assets/video/clk-8mhz.mp4" type="video/mp4">
+      你的浏览器不支持 video 标签，可以直接打开 <a href="assets/video/clk-8mhz.mp4">这段录屏</a>。
+    </video>
+    <figcaption>录屏 · HCLK = 8MHz。灯亮约一秒、灭约一秒。</figcaption>
+  </figure>
+
+  <h3 id="exp72">第二步，72MHz</h3>
+  <p>在左侧分类里选 <strong>System Core → RCC</strong>（Reset &amp; Clock Controller，复位和时钟控制器），时钟源在这儿配。</p>
+
+  <div class="figrow narrow">
+    <figure>
+      <img src="assets/clock/cube-rcc-cat.png" alt="CubeMX 左侧分类中 System Core 下的 RCC">
+      <figcaption>System Core → RCC</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/clock/cube-rcc-mode.png" alt="RCC Mode and Configuration 面板，High Speed Clock 与 Low Speed Clock 都是 Disable">
+      <figcaption>默认两颗外部晶振都是 Disable</figcaption>
+    </figure>
+  </div>
+
+  <p>点开 High Speed Clock (HSE)，有两个选项：</p>
+
+  <figure>
+    <img src="assets/clock/hse-options.png" alt="BYPASS Clock Source 与 Crystal/Ceramic Resonator 两种模式对比">
+    <figcaption>旁路时钟源 = 外面已经有一路现成的时钟信号，直接灌进来；晶体/陶瓷振荡器 = 外接晶振，由芯片内部电路起振</figcaption>
+  </figure>
+
+  <div class="note">
+    <p><span class="lbl">选哪个：</span>板上焊着晶振，选 <strong>Crystal/Ceramic Resonator</strong>。旁路是给外部有源晶振用的，接法不同，选错不起振。</p>
+  </div>
+
+  <p>选完引脚图上 PD0 和 PD1 变绿，标上 <code>RCC_OSC_IN</code> / <code>RCC_OSC_OUT</code>：这两个脚从此归晶振，不能当普通 IO 用。</p>
+
+  <figure class="small">
+    <img src="assets/clock/pd0-pd1.png" alt="PD0 与 PD1 被分配为 RCC_OSC_IN 和 RCC_OSC_OUT">
+    <figcaption>HSE 一启用，PD0 / PD1 就交出去了</figcaption>
+  </figure>
+
+  <p>接着回到时钟页，把 PLL 的输入选成 HSE，倍频系数填 9，再把 SYSCLK 的来源选成 PLL：</p>
+
+  <figure class="small">
+    <img src="assets/clock/pll-x9.png" alt="PLL Source Mux 选中 HSE，PLLMul 设为 X9">
+    <figcaption>PLL Source Mux 选 HSE，PLLMul 选 X9，8MHz × 9 = 72MHz</figcaption>
+  </figure>
+
+  <p>最后配三条树枝：AHB 分频 1（保持 72MHz）、APB1 分频 2（72 ÷ 2 = 36MHz，刚好是上限）、APB2 分频 1（还是 72MHz）。</p>
+
+  <figure>
+    <img src="assets/clock/clock-72.png" alt="配置完成后的时钟树：SYSCLK 72MHz、HCLK 72MHz、PCLK1 36MHz、PCLK2 72MHz">
+    <figcaption>配完之后：SYSCLK 72MHz → HCLK 72MHz → PCLK1 36MHz / PCLK2 72MHz，每一级都没超上限</figcaption>
+  </figure>
+
+  <figure class="video portrait">
+    <video controls preload="metadata" playsinline poster="assets/video/clk-72mhz-poster.jpg">
+      <source src="assets/video/clk-72mhz.mp4" type="video/mp4">
+      你的浏览器不支持 video 标签，可以直接打开 <a href="assets/video/clk-72mhz.mp4">这段录屏</a>。
+    </video>
+    <figcaption>录屏 · HCLK = 72MHz。代码一个字没改，灯明显闪得更快。</figcaption>
+  </figure>
+
+  <h3 id="result">两次对比</h3>
+  <p>重新生成代码烧进去，肉眼看得出差别：空循环的次数没变，每次循环花的时间只剩原来的九分之一。</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>项目</th><th>HCLK = 8MHz</th><th>HCLK = 72MHz</th></tr></thead>
+    <tbody>
+      <tr><td>时钟源</td><td>HSI（内部 8MHz）</td><td>HSE 8MHz × PLL 9</td></tr>
+      <tr><td>每秒指令数</td><td class="tnum">约 800 万</td><td class="tnum">约 7200 万</td></tr>
+      <tr><td>100 万次空循环</td><td class="tnum">约 1 秒</td><td class="tnum">约 0.11 秒</td></tr>
+      <tr><td>APB1 / APB2</td><td class="tnum">8 / 8 MHz</td><td class="tnum">36 / 72 MHz</td></tr>
+      <tr><td>LED 观感</td><td>慢悠悠地亮灭</td><td>快到接近闪频</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ================= 09 ================= -->
+<section id="quickref">
+  <div class="secnum">09 / REFERENCE</div>
+  <h2>速查</h2>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>节点</th><th>上限</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td>SYSCLK</td><td class="tnum">72 MHz</td><td>来自 HSI、HSE 或 PLL</td></tr>
+      <tr><td>HCLK</td><td class="tnum">72 MHz</td><td>决定内核执行速度</td></tr>
+      <tr><td>PCLK1</td><td class="tnum">36 MHz</td><td>APB1，SYSCLK 满速时应除以 2</td></tr>
+      <tr><td>PCLK2</td><td class="tnum">72 MHz</td><td>APB2，可以不分频</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>容易踩的坑</h3>
+  <ul>
+    <li><strong>HSE 一启用，PD0 / PD1 就没了。</strong>它们被分配给晶振，再当 GPIO 用会冲突。</li>
+    <li><strong>APB1 不能除以 1。</strong>SYSCLK 到 72MHz 时，APB1 直接接上去就是 72MHz，超过 36MHz 的上限。</li>
+    <li><strong>旁路模式和晶体模式接法不同。</strong>板上焊的是晶振，选 Crystal/Ceramic Resonator；选成旁路不起振，PLL 也就锁不上。</li>
+    <li><strong>低速树别混进来。</strong>RTC 和 IWDG 用的是 LSI / LSE，跟 SYSCLK 这条主干没有关系。</li>
+    <li><strong>频率一变，软件延时跟着变。</strong>空循环、软件延时都按主频算，主频一改就得重算；要稳定计时用定时器。</li>
+  </ul>
+
+  <div class="divider"></div>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>本页由《时钟系统_基础知识》《时钟系统_实验》两份笔记整理而成，插图为笔记原图，录屏为实验实录。</p>
+    <p>STM32 · 时钟树 · HCLK 8MHz 与 72MHz 对比 · 上一篇：<a href="index.html">GPIO 的输入与输出</a> · 下一篇：<a href="uart.html">串口通信</a></p>
+  </div>
+</footer>
+
+<div class="lb" id="lb"><img alt=""></div>
+
+<script>
+(function () {
+  /* ---------- 代码高亮（从 textContent 重建，避免二次转义） ---------- */
+  var KW = /\b(while|if|else|for|return|void|int|uint8_t|uint16_t|uint32_t|break|continue)\b/g;
+  var MACRO = /\b(HAL_[A-Za-z_]+|GPIO_PIN_(?:SET|RESET)|GPIO_PIN_\d+|GPIOC|GPIOA)\b/g;
+  var NUM = /(?<![A-Za-z_])\b(\d+)\b/g;
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlight(src) {
+    var parts = src.split(/(\/\/[^\n]*)/);
+    return parts.map(function (p, i) {
+      if (i % 2 === 1) return '<span class="c">' + esc(p) + '</span>';
+      var s = esc(p);
+      s = s.replace(MACRO, '<span class="m">$1</span>');
+      s = s.replace(KW, '<span class="k">$1</span>');
+      s = s.replace(NUM, '<span class="n">$1</span>');
+      return s;
+    }).join('');
+  }
+
+  document.querySelectorAll('pre > code').forEach(function (el) {
+    el.innerHTML = highlight(el.textContent.replace(/\s+$/, ''));
+  });
+
+  /* ---------- 图片灯箱 ---------- */
+  var lb = document.getElementById('lb');
+  var lbImg = lb.querySelector('img');
+  document.querySelectorAll('figure img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('open');
+    });
+  });
+  function close() { lb.classList.remove('open'); lbImg.src = ''; }
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  /* ---------- 目录高亮 ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var targets = Array.prototype.slice.call(document.querySelectorAll('main section[id], main h3[id]'));
+
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var a = byId[en.target.id];
+      if (!a) return;
+      links.forEach(function (x) { x.classList.remove('active'); });
+      a.classList.add('active');
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+
+  targets.forEach(function (t) { obs.observe(t); });
+
+})();
+</script>
+</body>
+</html>

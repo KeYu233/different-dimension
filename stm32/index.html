@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPIO 的输入与输出 · STM32 学习笔记</title>
+<style>
+:root{
+  --ink:#16202a;
+  --muted:#5d6b78;
+  --faint:#8b98a3;
+  --line:#e4e8eb;
+  --bg:#fcfcfb;
+  --card:#ffffff;
+  --accent:#16607a;
+  --accent-soft:#eaf2f5;
+  --warn:#9a5a12;
+  --warn-soft:#fdf5e8;
+  --code-bg:#f7f8f9;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.78;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px}
+.layout{display:grid; grid-template-columns:206px minmax(0,1fr); gap:56px; align-items:start}
+main{max-width:780px; min-width:0; padding-bottom:40px}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 40px; border-bottom:1px solid var(--line)}
+.kicker{
+  font-size:12px; letter-spacing:.18em; color:var(--faint);
+  text-transform:uppercase; margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(28px,4.2vw,40px); line-height:1.3; font-weight:600;
+  letter-spacing:.01em; margin:0 0 16px;
+}
+.lede{font-size:17px; color:var(--muted); max-width:640px; margin:0 0 26px}
+.facts{display:flex; flex-wrap:wrap; gap:10px 28px; font-size:13.5px; color:var(--muted)}
+.facts b{color:var(--ink); font-weight:600}
+.hero-note{margin-top:22px; font-size:12.5px; color:var(--faint)}
+
+/* ---------- toc ---------- */
+.toc{position:sticky; top:26px; padding-top:56px; font-size:13.5px}
+.toc-title{font-size:11px; letter-spacing:.16em; color:var(--faint); margin-bottom:12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--line)}
+.toc li a{
+  display:block; padding:5px 0 5px 14px; margin-left:-1px;
+  border-left:2px solid transparent; color:var(--muted); line-height:1.5;
+}
+.toc li a:hover{color:var(--ink); text-decoration:none}
+.toc li a.active{color:var(--accent); border-left-color:var(--accent); font-weight:500}
+.toc li.sub a{padding-left:26px; font-size:12.8px; color:#7b8894}
+
+/* ---------- sections ---------- */
+main > section{padding-top:64px; scroll-margin-top:20px}
+.secnum{
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:12px; letter-spacing:.14em; color:var(--accent); margin-bottom:10px;
+}
+h2{font-size:24px; font-weight:600; margin:0 0 8px; letter-spacing:.01em}
+h3{font-size:17.5px; font-weight:600; margin:40px 0 10px}
+h3::before{content:""; display:inline-block; width:14px; height:1px; background:var(--accent);
+  vertical-align:middle; margin-right:10px; transform:translateY(-2px)}
+h4{font-size:15px; font-weight:600; margin:24px 0 6px; color:var(--ink)}
+p{margin:12px 0}
+.sub{color:var(--muted); font-size:14.5px; margin-top:0}
+ul,ol{margin:12px 0; padding-left:22px}
+li{margin:6px 0}
+li::marker{color:var(--faint)}
+strong{font-weight:600}
+code{
+  font-family:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono",monospace;
+  font-size:.9em; background:#f1f3f4; padding:1px 5px; border-radius:4px;
+  color:#0f3d4d;
+}
+
+/* ---------- figures ---------- */
+figure{margin:26px 0}
+figure img{
+  display:block; width:100%; height:auto; background:#fff;
+  border:1px solid var(--line); border-radius:8px; cursor:zoom-in;
+}
+figure.small img{max-width:520px; margin:0 auto}
+figure.tiny img{max-width:360px; margin:0 auto}
+figure svg{display:block; width:100%; height:auto; background:#fff;
+  border:1px solid var(--line); border-radius:8px}
+figure.small svg{max-width:560px; margin:0 auto}
+.sg-lbl{font-size:13px; font-weight:500; fill:var(--ink)}
+.sg-sub{font-size:11.5px; fill:var(--faint)}
+.sg-num{font-size:12.5px; font-weight:500; fill:var(--muted);
+  font-family:ui-monospace, Consolas, monospace}
+.sg-line{fill:none; stroke:var(--ink); stroke-width:1.6; stroke-linejoin:round; stroke-linecap:round}
+.sg-on{fill:none; stroke:var(--accent); stroke-width:2.6; stroke-linecap:round}
+.sg-axis{fill:none; stroke:var(--ink); stroke-width:1.1}
+.sg-dim{fill:none; stroke:var(--faint); stroke-width:1; stroke-dasharray:2 3}
+.sg-arrow{fill:none; stroke:var(--ink); stroke-width:1.2; stroke-linecap:round}
+.sg-arrowhead{fill:var(--ink); stroke:none}
+.sg-x{fill:none; stroke:#b4453a; stroke-width:1.8; stroke-linecap:round}
+.sg-faint{fill:none; stroke:var(--faint); stroke-width:1.2; stroke-dasharray:3 3}
+.sg-pin{fill:#fff; stroke:var(--ink); stroke-width:1.2}
+.sg-node{fill:var(--ink)}
+.sg-box{fill:#fff; stroke:var(--line); stroke-width:1.2}
+.sg-chip{fill:#f2f4f6; stroke:var(--ink); stroke-width:1.2}
+.sg-res{fill:#fff; stroke:var(--ink); stroke-width:1.2}
+.sg-respath{fill:none; stroke:var(--ink); stroke-width:1.2; stroke-linejoin:round}
+.sg-sw{fill:none; stroke:var(--ink); stroke-width:1.3; stroke-linecap:round}
+.sg-open{fill:#fff; stroke:var(--ink); stroke-width:1.1}
+.sg-level{font-size:12px; fill:var(--accent); font-weight:600}
+.sg-bracket{fill:none; stroke:var(--ink); stroke-width:1.2}
+.sg-dash{fill:none; stroke:#b4453a; stroke-width:1.4; stroke-dasharray:4 3}
+figcaption{
+  font-size:12.8px; color:var(--faint); text-align:center;
+  margin-top:10px; line-height:1.6;
+}
+.figrow{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:26px 0}
+.figrow figure{margin:0}
+.figrow figcaption{font-size:12.5px}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-weight:600; font-size:13px; color:var(--muted); border-bottom:1px solid #cfd6db;
+  white-space:nowrap; letter-spacing:.02em}
+tbody tr:hover{background:#fafbfb}
+td code{background:none; padding:0; color:inherit; font-size:13.2px}
+.tnum{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ---------- cards ---------- */
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:22px 0}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:18px 20px; font-size:14.5px; line-height:1.7;
+}
+.card h4{margin:0 0 6px; font-size:14.5px}
+.card p{margin:0; color:var(--muted); font-size:14px}
+.card .tag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+.card .tag.warn{color:var(--warn); background:var(--warn-soft)}
+
+/* ---------- callout ---------- */
+.note{
+  margin:24px 0; padding:14px 18px; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 8px 8px 0; font-size:14.5px;
+}
+.note.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.note p{margin:0}
+.note p + p{margin-top:8px}
+.note .lbl{font-weight:600; margin-right:2px}
+.note.warn .lbl{color:var(--warn)}
+.note .lbl{color:var(--accent)}
+
+/* ---------- code ---------- */
+pre{
+  margin:20px 0; padding:16px 18px; background:var(--code-bg);
+  border:1px solid var(--line); border-radius:8px; overflow-x:auto;
+  font-size:13.2px; line-height:1.7;
+}
+pre code{background:none; padding:0; font-size:inherit; color:#22303a}
+.k{color:#8b3fa8}      /* keyword */
+.f{color:#16607a}      /* function */
+.n{color:#a05c11}      /* number */
+.c{color:#8b98a3; font-style:normal}  /* comment */
+.m{color:#2b6b4f}      /* macro const */
+
+/* ---------- misc ---------- */
+.divider{height:1px; background:var(--line); margin:56px 0 0}
+.kv{display:grid; grid-template-columns:120px 1fr; gap:4px 18px; font-size:14.5px; margin:18px 0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+footer{
+  border-top:1px solid var(--line); margin-top:80px; padding:28px 0 60px;
+  font-size:13px; color:var(--faint);
+}
+footer p{margin:4px 0}
+
+/* ---------- lightbox ---------- */
+.lb{
+  position:fixed; inset:0; background:rgba(16,24,30,.9); display:none;
+  align-items:center; justify-content:center; padding:4vw; z-index:50; cursor:zoom-out;
+}
+.lb.open{display:flex}
+.lb img{max-width:100%; max-height:100%; background:#fff; border-radius:6px}
+
+/* ---------- responsive ---------- */
+@media (max-width:960px){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .toc{display:none}
+  .hero{padding:44px 0 30px}
+  .wrap{padding:0 20px}
+  main > section{padding-top:48px}
+  .grid,.grid.three,.figrow{grid-template-columns:1fr}
+  .figrow{gap:26px}
+  h2{font-size:21px}
+  .kv{grid-template-columns:100px 1fr}
+}
+@media print{
+  .toc,.lb{display:none}
+  body{background:#fff}
+  .hero{padding-top:0}
+  main > section{page-break-inside:auto}
+  figure{page-break-inside:avoid}
+}
+
+/* —— 博客返回入口（整进「异乡之翼」时加的，非原文） —— */
+.gf-home{position:fixed; top:14px; right:16px; z-index:60; padding:6px 14px; border-radius:999px;
+  border:1px solid var(--line); background:rgba(255,255,255,.92); color:var(--muted);
+  font-size:12.5px; letter-spacing:.04em; box-shadow:0 2px 10px rgba(22,32,42,.08);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.gf-home:hover{color:var(--accent); border-color:var(--accent); background:#fff}
+@media (max-width:640px){.gf-home{top:10px; right:10px; padding:5px 11px; font-size:12px}}
+@media print{.gf-home{display:none}}</style>
+</head>
+<body>
+
+<a class="gf-home" href="../">&larr; 异乡之翼</a>
+
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">STM32 · 嵌入式学习笔记</div>
+    <h1>GPIO 的输入与输出</h1>
+    <p class="lede">从端口里面的两只 MOS 管和两只上下拉电阻讲起，一路走到推挽与开漏、上拉与浮空，最后落成两个能跑的实验：点亮 LED，和用按键控制它。</p>
+    <div class="facts">
+      <span><b>输出</b> 推挽 / 开漏 · 通用 / 复用 · 三档速率</span>
+      <span><b>输入</b> 上拉 / 下拉 / 浮空 / 模拟</span>
+      <span><b>实验</b> PC13 板载灯 · PA9 外接灯与按键</span>
+    </div>
+    <div class="hero-note">整理自《GPIO_输出方式与点灯实验》《GPIO_输入方式》两份笔记</div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+<aside class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#output">一、GPIO 输出</a></li>
+    <li class="sub"><a href="#modes-out">四种输出模式</a></li>
+    <li class="sub"><a href="#pushpull">推挽与开漏</a></li>
+    <li class="sub"><a href="#gpio-af">通用与复用</a></li>
+    <li class="sub"><a href="#speed">最大输出速率</a></li>
+    <li><a href="#exp1">二、实验一：点亮 LED</a></li>
+    <li class="sub"><a href="#led-wire">两种接法</a></li>
+    <li class="sub"><a href="#led-hw">硬件与配置</a></li>
+    <li class="sub"><a href="#led-code">代码</a></li>
+    <li><a href="#input">三、GPIO 输入</a></li>
+    <li class="sub"><a href="#modes-in">四种输入模式</a></li>
+    <li class="sub"><a href="#floating">浮空为什么危险</a></li>
+    <li><a href="#exp2">四、实验二：按键控制 LED</a></li>
+    <li class="sub"><a href="#btn-wire">两种接法</a></li>
+    <li class="sub"><a href="#btn-hw">硬件与配置</a></li>
+    <li class="sub"><a href="#btn-code">代码</a></li>
+    <li><a href="#quickref">五、速查与易错点</a></li>
+  </ol>
+</aside>
+
+<main>
+
+<!-- ================= 输出 ================= -->
+<section id="output">
+  <div class="secnum">01 / OUTPUT</div>
+  <h2>GPIO 输出</h2>
+  <p class="sub">输出就是让引脚变成一根由程序控制的电线：写 0 拉到低电平，写 1 拉到高电平。</p>
+
+  <p>STM32 的每个 GPIO 引脚内部都有同一套结构：输出驱动器（一对 P-MOS / N-MOS）、输入驱动器（TTL 施密特触发器）、上下拉电阻开关，以及两个保护二极管。</p>
+
+  <figure>
+    <img src="assets/out_01.png" alt="STM32 I/O 端口位的基本结构框图">
+    <figcaption>I/O 端口位的基本结构。输出级是一对串联在 V<sub>DD</sub> 与 V<sub>SS</sub> 之间的 MOS 管，中点接到引脚。</figcaption>
+  </figure>
+
+  <h3 id="modes-out">四种输出模式</h3>
+  <p>输出模式由两个维度交叉得到：<strong>谁来控制</strong>（通用 / 复用），和<strong>怎么推</strong>（推挽 / 开漏）。</p>
+
+  <figure class="small">
+    <svg viewBox="0 0 760 210" role="img" aria-label="四种输出模式：通用与复用、推挽与开漏两组交叉">
+    <text class="sg-lbl" x="150" y="34" text-anchor="middle">推挽</text>
+    <text class="sg-lbl" x="400" y="34" text-anchor="middle">开漏</text>
+    <text class="sg-lbl" x="40" y="104" text-anchor="start">通用</text>
+    <text class="sg-lbl" x="40" y="174" text-anchor="start">复用</text>
+    <rect class="sg-box" x="120" y="56" width="200" height="44" rx="6"/>
+    <text class="sg-lbl" x="220" y="84" text-anchor="middle">通用输出推挽</text>
+    <rect class="sg-box" x="370" y="56" width="200" height="44" rx="6"/>
+    <text class="sg-lbl" x="470" y="84" text-anchor="middle">通用输出开漏</text>
+    <rect class="sg-box" x="120" y="126" width="200" height="44" rx="6"/>
+    <text class="sg-lbl" x="220" y="154" text-anchor="middle">复用输出推挽</text>
+    <rect class="sg-box" x="370" y="126" width="200" height="44" rx="6"/>
+    <text class="sg-lbl" x="470" y="154" text-anchor="middle">复用输出开漏</text>
+    <path class="sg-axis" d="M 120 46 L 320 46"/>
+    <path class="sg-axis" d="M 370 46 L 570 46"/>
+    <path class="sg-axis" d="M 104 56 L 104 170"/>
+    </svg>
+    <figcaption>四种输出模式</figcaption>
+  </figure>
+
+  <div class="grid">
+    <div class="card">
+      <span class="tag">常用</span>
+      <h4>通用输出推挽</h4>
+      <p>程序直接控制，上下管交替导通。输出能力最强，驱动 LED、驱动电平最常用。</p>
+    </div>
+    <div class="card">
+      <span class="tag">常用</span>
+      <h4>通用输出开漏</h4>
+      <p>程序直接控制，上管恒断。只能主动拉低，高电平要靠外部上拉，常用于电平转换与总线。</p>
+    </div>
+    <div class="card">
+      <h4>复用输出推挽</h4>
+      <p>引脚交给串口、定时器、SPI 等外设托管，由外设产生波形。此时程序写数据寄存器不再生效。</p>
+    </div>
+    <div class="card">
+      <h4>复用输出开漏</h4>
+      <p>同上，但输出级为开漏。I²C 这类需要线与的总线就工作在这个模式。</p>
+    </div>
+  </div>
+
+  <h3 id="pushpull">推挽与开漏</h3>
+  <p>把两只 MOS 管看成两个开关，中间那个点就是引脚：上管合上接 V<sub>DD</sub>，下管合上接 V<sub>SS</sub>。所有输出模式的区别，只在于这两个开关怎么配合。</p>
+
+  <figure class="tiny">
+    <img src="assets/out_04.png" alt="P-MOS 与 N-MOS 串联，中点接引脚">
+    <figcaption>两只 MOS 管等效为两个开关</figcaption>
+  </figure>
+
+  <h4>推挽：交替导通</h4>
+  <p>写 0 时 N-MOS 导通、P-MOS 关断，引脚被拉到 V<sub>SS</sub>，输出低电平；写 1 时反过来，引脚被拉到 V<sub>DD</sub>，输出高电平。<strong>两个方向都是管子主动去推</strong>，一推一挽，所以叫推挽。</p>
+
+  <figure>
+    <img src="assets/out_05.png" alt="推挽模式：写 0 输出低，写 1 输出高">
+    <figcaption>推挽：向 IO 写 0 输出低电平，写 1 输出高电平</figcaption>
+  </figure>
+
+  <h4>开漏：上管恒断</h4>
+  <p>写 0 时 N-MOS 导通，引脚拉低；写 1 时<strong>两只管子全断</strong>，引脚处于高阻态，没有电流通路。按欧姆定律，电阻趋于无穷大，此时引脚电压由外部电路决定 —— 通常靠一颗外部上拉电阻把它拉高。</p>
+
+  <figure>
+    <img src="assets/out_06.png" alt="开漏模式：写 0 输出低，写 1 输出高阻">
+    <figcaption>开漏：写 0 输出低电平，写 1 输出高阻抗</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>模式</th><th>写 0</th><th>写 1</th><th>特点</th></tr></thead>
+      <tbody>
+        <tr><td>推挽</td><td>低电平</td><td>高电平</td><td>双向主动驱动，速度快、带载强</td></tr>
+        <tr><td>开漏</td><td>低电平</td><td>高阻（电平由外部定）</td><td>只能拉低；接上拉才有高电平；可做线与与电平转换</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="gpio-af">通用与复用</h3>
+  <p><strong>通用</strong>：控制权在程序手里，通过输出数据寄存器直接控制 IO 引脚。<strong>复用</strong>：把引脚的控制权交给片上其他模块，比如串口模块要往这根线发数据，就由它来产生波形。</p>
+
+  <figure>
+    <svg viewBox="0 0 760 250" role="img" aria-label="通用输出由程序写数据寄存器，复用输出由外设模块产生波形">
+    <rect class="sg-chip" x="260" y="46" width="130" height="76" rx="4"/>
+    <path class="sg-line" d="M 272 39 L 272 46"/>
+    <path class="sg-line" d="M 272 122 L 272 129"/>
+    <path class="sg-line" d="M 291 39 L 291 46"/>
+    <path class="sg-line" d="M 291 122 L 291 129"/>
+    <path class="sg-line" d="M 310 39 L 310 46"/>
+    <path class="sg-line" d="M 310 122 L 310 129"/>
+    <path class="sg-line" d="M 329 39 L 329 46"/>
+    <path class="sg-line" d="M 329 122 L 329 129"/>
+    <path class="sg-line" d="M 348 39 L 348 46"/>
+    <path class="sg-line" d="M 348 122 L 348 129"/>
+    <path class="sg-line" d="M 367 39 L 367 46"/>
+    <path class="sg-line" d="M 367 122 L 367 129"/>
+    <text class="sg-sub" x="325" y="89" text-anchor="middle">0101</text>
+    <path class="sg-line" d="M 390 84 L 440 84"/>
+    <path class="sg-line" d="M 440 84 h 14 v -16 h 14 v 32 h 14 v -16 h 14 v 16 h 14"/>
+    <text class="sg-lbl" x="200" y="76" text-anchor="end">通用</text>
+    <text class="sg-sub" x="200" y="98" text-anchor="end">程序直接控制</text>
+    <rect class="sg-chip" x="260" y="146" width="130" height="76" rx="4"/>
+    <path class="sg-line" d="M 272 139 L 272 146"/>
+    <path class="sg-line" d="M 272 222 L 272 229"/>
+    <path class="sg-line" d="M 291 139 L 291 146"/>
+    <path class="sg-line" d="M 291 222 L 291 229"/>
+    <path class="sg-line" d="M 310 139 L 310 146"/>
+    <path class="sg-line" d="M 310 222 L 310 229"/>
+    <path class="sg-line" d="M 329 139 L 329 146"/>
+    <path class="sg-line" d="M 329 222 L 329 229"/>
+    <path class="sg-line" d="M 348 139 L 348 146"/>
+    <path class="sg-line" d="M 348 222 L 348 229"/>
+    <path class="sg-line" d="M 367 139 L 367 146"/>
+    <path class="sg-line" d="M 367 222 L 367 229"/>
+    <text class="sg-sub" x="325" y="189" text-anchor="middle">串口</text>
+    <path class="sg-line" d="M 390 184 L 440 184"/>
+    <path class="sg-line" d="M 440 184 h 14 v -16 h 14 v 32 h 14 v -16 h 14 v 16 h 14"/>
+    <text class="sg-lbl" x="200" y="176" text-anchor="end">复用</text>
+    <text class="sg-sub" x="200" y="198" text-anchor="end">外设托管</text>
+    </svg>
+    <figcaption>通用（直接控制）与复用（其他模块托管）</figcaption>
+  </figure>
+
+  <p>判断方法很直接：这根线上跑的是你想写的电平，还是某个外设的波形？前者用通用，后者用复用。</p>
+
+  <h3 id="speed">最大输出速率</h3>
+  <p>理想的数字波形是方波，但实际上高低切换需要时间：电压从低爬到高叫<strong>上升时间</strong>，从高跌落叫<strong>下降时间</strong>，中间停留在高电平的时间叫<strong>保持时间</strong>。</p>
+
+  <figure>
+    <svg viewBox="0 0 760 300" role="img" aria-label="理想方波与带上升、下降时间的实际波形">
+    <text class="sg-num" x="181" y="26" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 181 33 V 48"/>
+    <path class="sg-arrow" d="M 181 48 l -3.2 -5.6 M 181 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="243" y="26" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 243 33 V 48"/>
+    <path class="sg-arrow" d="M 243 48 l -3.2 -5.6 M 243 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="305" y="26" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 305 33 V 48"/>
+    <path class="sg-arrow" d="M 305 48 l -3.2 -5.6 M 305 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="367" y="26" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 367 33 V 48"/>
+    <path class="sg-arrow" d="M 367 48 l -3.2 -5.6 M 367 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="429" y="26" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 429 33 V 48"/>
+    <path class="sg-arrow" d="M 429 48 l -3.2 -5.6 M 429 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="491" y="26" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 491 33 V 48"/>
+    <path class="sg-arrow" d="M 491 48 l -3.2 -5.6 M 491 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="553" y="26" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 553 33 V 48"/>
+    <path class="sg-arrow" d="M 553 48 l -3.2 -5.6 M 553 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="615" y="26" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 615 33 V 48"/>
+    <path class="sg-arrow" d="M 615 48 l -3.2 -5.6 M 615 48 l 3.2 -5.6"/>
+    <text class="sg-num" x="677" y="26" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 677 33 V 48"/>
+    <path class="sg-arrow" d="M 677 48 l -3.2 -5.6 M 677 48 l 3.2 -5.6"/>
+    <text class="sg-lbl" x="20" y="80" text-anchor="start">理想</text>
+    <text class="sg-lbl" x="20" y="102" text-anchor="start">情况</text>
+    <path class="sg-line" d="M 150 64 L 212 64 L 212 104 L 274 104 L 274 64 L 336 64 L 336 104 L 398 104 L 398 64 L 460 64 L 460 104 L 522 104 L 522 64 L 584 64 L 584 104 L 646 104 L 646 64 L 708 64"/>
+    <text class="sg-lbl" x="20" y="184" text-anchor="start">实际</text>
+    <text class="sg-lbl" x="20" y="206" text-anchor="start">情况</text>
+    <path class="sg-line" d="M 124 208 L 150 208 L 150 208 L 158 168 L 212 168 L 212 168 L 220 208 L 274 208 L 274 208 L 282 168 L 336 168 L 336 168 L 344 208 L 398 208 L 398 208 L 406 168 L 460 168 L 460 168 L 468 208 L 522 208 L 522 208 L 530 168 L 584 168 L 584 168 L 592 208 L 646 208 L 646 208 L 654 168 L 708 168"/>
+    <path class="sg-dim" d="M 150 212 L 150 245"/>
+    <path class="sg-dim" d="M 158 212 L 158 245"/>
+    <path class="sg-dim" d="M 212 212 L 212 245"/>
+    <path class="sg-dim" d="M 220 212 L 220 245"/>
+    <path class="sg-dim" d="M 150 240 L 220 240"/>
+    <text class="sg-sub" x="142" y="245" text-anchor="end">上升</text>
+    <text class="sg-sub" x="185" y="258" text-anchor="middle">保持时间</text>
+    <text class="sg-sub" x="228" y="245" text-anchor="start">下降</text>
+    </svg>
+    <figcaption>理想是方波，实际有斜坡；斜坡之间那段平顶就是保持时间</figcaption>
+  </figure>
+
+  <p>如果把切换频率提上去，斜坡就会越靠越近，平顶越来越短。再快，上升沿和下降沿直接重合，引脚上就<strong>再也量不出有效的高低电平</strong>了 —— 这是“速度不够”的真正含义。</p>
+
+  <figure>
+    <svg viewBox="0 0 760 260" role="img" aria-label="频率过高平顶消失成三角波；边沿变陡后平顶回来">
+    <text class="sg-num" x="181" y="24" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 181 31 V 44"/>
+    <path class="sg-arrow" d="M 181 44 l -3.2 -5.6 M 181 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="243" y="24" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 243 31 V 44"/>
+    <path class="sg-arrow" d="M 243 44 l -3.2 -5.6 M 243 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="305" y="24" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 305 31 V 44"/>
+    <path class="sg-arrow" d="M 305 44 l -3.2 -5.6 M 305 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="367" y="24" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 367 31 V 44"/>
+    <path class="sg-arrow" d="M 367 44 l -3.2 -5.6 M 367 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="429" y="24" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 429 31 V 44"/>
+    <path class="sg-arrow" d="M 429 44 l -3.2 -5.6 M 429 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="491" y="24" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 491 31 V 44"/>
+    <path class="sg-arrow" d="M 491 44 l -3.2 -5.6 M 491 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="553" y="24" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 553 31 V 44"/>
+    <path class="sg-arrow" d="M 553 44 l -3.2 -5.6 M 553 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="615" y="24" text-anchor="middle">0</text>
+    <path class="sg-arrow" d="M 615 31 V 44"/>
+    <path class="sg-arrow" d="M 615 44 l -3.2 -5.6 M 615 44 l 3.2 -5.6"/>
+    <text class="sg-num" x="677" y="24" text-anchor="middle">1</text>
+    <path class="sg-arrow" d="M 677 31 V 44"/>
+    <path class="sg-arrow" d="M 677 44 l -3.2 -5.6 M 677 44 l 3.2 -5.6"/>
+    <text class="sg-lbl" x="20" y="76" text-anchor="start">太快</text>
+    <path class="sg-line" d="M 126 96 L 150 96 L 150 96 L 206 56 L 212 56 L 212 56 L 268 96 L 274 96 L 274 96 L 330 56 L 336 56 L 336 56 L 392 96 L 398 96 L 398 96 L 454 56 L 460 56 L 460 56 L 516 96 L 522 96 L 522 96 L 578 56 L 584 56 L 584 56 L 640 96 L 646 96 L 646 96 L 702 56 L 708 56"/>
+    <text class="sg-sub" x="429" y="128" text-anchor="middle">平顶没了，只剩斜坡 —— 量不出稳定电平</text>
+    <text class="sg-lbl" x="20" y="190" text-anchor="start">边沿变陡</text>
+    <path class="sg-line" d="M 126 210 L 150 210 L 150 210 L 157 170 L 212 170 L 212 170 L 219 210 L 274 210 L 274 210 L 281 170 L 336 170 L 336 170 L 343 210 L 398 210 L 398 210 L 405 170 L 460 170 L 460 170 L 467 210 L 522 210 L 522 210 L 529 170 L 584 170 L 584 170 L 591 210 L 646 210 L 646 210 L 653 170 L 708 170"/>
+    <text class="sg-sub" x="429" y="242" text-anchor="middle">同样的位宽，边沿更陡，平顶就回来了</text>
+    </svg>
+    <figcaption>上：继续加频率，平顶消失，只剩斜坡；下：同样的位宽，边沿变陡，平顶就回来了</figcaption>
+  </figure>
+
+  <p>解决办法不是降频，而是让边沿更陡 —— 用更快的上升、下降速度，把平顶重新让出来。</p>
+
+  <p>STM32 因此提供了三档速度，由 CubeMX 里的 <code>Maximum output speed</code> 选择：</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>档位</th><th class="tnum">上升 / 下降时间</th><th class="tnum">保持时间</th><th class="tnum">最高输出频率</th></tr></thead>
+      <tbody>
+        <tr><td>低速 Low</td><td class="tnum">≈ 125 ns</td><td class="tnum">≈ 200 ns</td><td class="tnum">2 MHz</td></tr>
+        <tr><td>中速 Medium</td><td class="tnum">≈ 25 ns</td><td class="tnum">≈ 50 ns</td><td class="tnum">10 MHz</td></tr>
+        <tr><td>高速 High</td><td class="tnum">≈ 5 ns</td><td class="tnum">≈ 10 ns</td><td class="tnum">50 MHz</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="figrow">
+    <figure>
+      <img src="assets/out_12.png" alt="低速档波形：125ns 上升，250ns 保持，2MHz">
+      <figcaption>低速 2 MHz</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/out_14.png" alt="高速档波形：5ns 上升，10ns 保持，50MHz">
+      <figcaption>高速 50 MHz</figcaption>
+    </figure>
+  </div>
+
+  <div class="note">
+    <p><span class="lbl">怎么选：</span>够用就好。边沿越陡，高频成分越多，电磁干扰和功耗也越大。LED、按键、继电器这类慢信号用低速完全足够。</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ================= 实验一 ================= -->
+<section id="exp1">
+  <div class="secnum">02 / EXPERIMENT</div>
+  <h2>实验一：点亮 LED</h2>
+  <p class="sub">同一颗灯，接法不同，写 0 和写 1 的含义正好相反。</p>
+
+  <h3 id="led-wire">两种接法</h3>
+  <p>LED 有极性：长脚是<strong>阳极</strong>，短脚是<strong>阴极</strong>。电流只能从阳极流向阴极，所以它接在引脚和电源之间时，方向决定了什么电平才算“亮”。</p>
+
+  <div class="grid">
+    <div class="card">
+      <span class="tag">高电平点亮</span>
+      <h4>推挽接法</h4>
+      <p>阳极接引脚、阴极接 V<sub>SS</sub>。写 1 输出高电平，电流从引脚流出点亮；写 0 熄灭。</p>
+    </div>
+    <div class="card">
+      <span class="tag">低电平点亮</span>
+      <h4>开漏接法</h4>
+      <p>阳极接 V<sub>DD</sub>、阴极接引脚。写 0 把引脚拉低，电流灌入引脚点亮；写 1 输出高阻，灯灭。</p>
+    </div>
+  </div>
+
+  <figure>
+    <img src="assets/out_15.png" alt="推挽接法电路：阳极接引脚，阴极接地，写1点亮">
+    <figcaption>推挽接法：向 IO 写 0 熄灭，写 1 点亮</figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/out_16.png" alt="开漏接法电路：阳极接 Vdd，阴极接引脚，写0点亮">
+    <figcaption>开漏接法：向 IO 写 1 熄灭，写 0 点亮</figcaption>
+  </figure>
+
+  <p>亮度上也有区别：<strong>推挽接法的亮度更稳定、更亮</strong>，因为高电平是管子主动推上去的；开漏接法的亮度取决于外部上拉电阻的设计，上拉阻值偏大时灯会偏暗。</p>
+
+  <h3 id="led-hw">硬件与配置</h3>
+  <p>板子上自带一颗 LED，接在 <code>PC13</code>，用的是<strong>开漏接法</strong> —— 低电平点亮。如果想试推挽接法，可以外接一颗 LED 到 <code>PA9</code>：阳极接 PA9，阴极经限流电阻接 GND，电阻取 1 kΩ 左右。</p>
+
+  <figure>
+    <img src="assets/out_17.png" alt="开发板板载 LED 接 PC13，开漏接法经 1k 电阻到 Vdd">
+    <figcaption>板载 LED：PC13 经开漏接法、1 kΩ 电阻接到 V<sub>DD</sub></figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/out_18.png" alt="PA9 推挽接法外接 LED，阳极接 PA9，阴极经电阻接地">
+    <figcaption>PA9 推挽接法：阳极接 PA9，阴极经电阻接 V<sub>SS</sub></figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/out_19.png" alt="面包板实物接线：PC13 板载灯与外接 PA9 灯">
+    <figcaption>面包板上的实际接线，限流电阻取 1000 Ω</figcaption>
+  </figure>
+
+  <p>CubeMX 里对 PA9 的配置：模式选 <code>Output Push Pull</code>，初始电平 <code>Low</code>，上下拉选 <code>No pull-up and no pull-down</code>（这个实验用不到），速度选 <code>Low</code> —— LED 切换频率很低，没必要上高速。</p>
+
+  <figure>
+    <img src="assets/out_20.png" alt="CubeMX 引脚配置面板与 PC13、PA9 的电平对应表">
+    <figcaption>引脚配置五项，右边是两种接法下 0 / 1 与亮灭的对应关系</figcaption>
+  </figure>
+
+  <figure class="small">
+    <img src="assets/out_22.png" alt="上下拉与 User Label 两项在本实验中不使用">
+    <figcaption>上拉/下拉电阻与自定义标签暂时不用</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>引脚</th><th>接法</th><th>写 0</th><th>写 1</th></tr></thead>
+      <tbody>
+        <tr><td><code>PC13</code> 板载</td><td>开漏</td><td>亮</td><td>灭</td></tr>
+        <tr><td><code>PA9</code> 外接</td><td>推挽</td><td>灭</td><td>亮</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="led-code">代码</h3>
+  <p>生成工程后，代码写在 <code>main.c</code> 的 <code>while(1)</code> 里。CubeMX 已经替我们生成了 <code>HAL_Init()</code>（HAL 库初始化）、<code>SystemClock_Config()</code>（系统时钟）、<code>MX_GPIO_Init()</code>（引脚初始化）三件事，不用自己写。</p>
+
+  <p>控制电平只需要一个接口：</p>
+
+  <pre><code>void HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)</code></pre>
+
+  <dl class="kv">
+    <dt>GPIOx</dt><dd>组编号，x 取 A/B/C/D，如 <code>GPIOA</code>、<code>GPIOC</code></dd>
+    <dt>GPIO_Pin</dt><dd>引脚编号，<code>GPIO_PIN_0</code> ~ <code>GPIO_PIN_15</code></dd>
+    <dt>PinState</dt><dd><code>GPIO_PIN_RESET</code> = 写 0，<code>GPIO_PIN_SET</code> = 写 1</dd>
+  </dl>
+
+  <p>于是点灯与熄灭就是两行调用，注意两颗灯电平相反：</p>
+
+  <pre><code>// 点亮
+HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);  // PC13 开漏，写 0 点亮
+HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,  GPIO_PIN_SET);    // PA9  推挽，写 1 点亮
+
+// 熄灭
+HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);    // 开漏，写 1 熄灭
+HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,  GPIO_PIN_RESET);  // 推挽，写 0 熄灭</code></pre>
+
+  <p>让它们闪起来，就是把这两组语句交替执行，中间加延时：</p>
+
+  <pre><code>while (1)
+{
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);  // PC13 亮
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,  GPIO_PIN_SET);    // PA9  亮
+
+    HAL_Delay(500);                                         // 保持 0.5 秒
+
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);    // PC13 灭
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,  GPIO_PIN_RESET);  // PA9  灭
+
+    HAL_Delay(500);                                         // 保持 0.5 秒
+}</code></pre>
+
+  <div class="note">
+    <p><span class="lbl">为什么 WritePin 不是在翻转电平：</span>它写的是确定值，不是取反。所以两行调用可以任意重复执行，灯的状态始终是确定的 —— 这也是它比“读回来再取反”更可靠的地方。</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ================= 输入 ================= -->
+<section id="input">
+  <div class="secnum">03 / INPUT</div>
+  <h2>GPIO 输入</h2>
+  <p class="sub">输入是反过来的事：引脚不主动输出，而是把外面的电压读进片内的数据寄存器。</p>
+
+  <h3 id="modes-in">四种输入模式</h3>
+  <p>输入侧除了模拟模式，其余三种都由端口内部的两只电阻开关决定 —— 就是结构图里 V<sub>DD</sub> 下方和 V<sub>SS</sub> 上方那两串电阻。</p>
+
+  <figure class="tiny">
+    <svg viewBox="0 0 760 200" role="img" aria-label="四种输入模式：上拉、下拉、浮空、模拟">
+    <text class="sg-lbl" x="40" y="104" text-anchor="start">输入</text>
+    <path class="sg-bracket" d="M 100 96 q 9 0 9 -9 V 50 q 0 -9 9 -9 M 100 96 q 9 0 9 9 V 142 q 0 9 9 9"/>
+    <text class="sg-lbl" x="130" y="48" text-anchor="start">输入上拉</text>
+    <text class="sg-lbl" x="130" y="86" text-anchor="start">输入下拉</text>
+    <text class="sg-lbl" x="130" y="124" text-anchor="start">输入浮空</text>
+    <rect class="sg-dash" x="126" y="152" width="112" height="32" rx="4"/>
+    <text class="sg-lbl" x="132" y="174" text-anchor="start">模拟模式</text>
+    <text class="sg-sub" x="260" y="174" text-anchor="start">输入通路关闭，交给 ADC</text>
+    </svg>
+    <figcaption>四种输入模式</figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/in_02.png" alt="结构图中标出上拉电阻与下拉电阻的两个开关">
+    <figcaption>红框即上拉电阻（接 V<sub>DD</sub>）与下拉电阻（接 V<sub>SS</sub>）的开关</figcaption>
+  </figure>
+
+  <p>三种模式的区别只有一句话：<strong>哪只电阻被接通</strong>。</p>
+
+  <figure>
+    <img src="assets/in_03.png" alt="上拉电阻使能即输入上拉模式，下拉使能即输入下拉，都不使能即浮空">
+    <figcaption>开关的组合与三种模式的对应关系</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>模式</th><th>开关状态</th><th>引脚悬空时读到</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>输入上拉</td><td>上面闭合</td><td>高电平 1</td><td>按键接地型，最常用</td></tr>
+        <tr><td>输入下拉</td><td>下面闭合</td><td>低电平 0</td><td>按键接电源型</td></tr>
+        <tr><td>输入浮空</td><td>都不闭合</td><td>不确定</td><td>外部已有确定的驱动源时</td></tr>
+        <tr><td>模拟模式</td><td>输入通路关闭</td><td>——</td><td>ADC 采样，交给模拟外设</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>上拉电阻和下拉电阻的作用是同一个：<strong>在引脚没有被外部电路驱动时，给它一个确定的默认电平</strong>。上拉给默认高电压，下拉给默认低电压。</p>
+
+  <figure>
+    <img src="assets/in_04.png" alt="上拉电阻提供默认高电压，下拉电阻提供默认低电压">
+    <figcaption>上拉给默认高电压，下拉给默认低电压</figcaption>
+  </figure>
+
+  <h3 id="floating">浮空为什么危险</h3>
+  <p>都不接的时候，引脚和任何电平之间都没有一条低阻通路，等效电阻趋于无穷大。此时引脚上的电压由漏电流、空间干扰、手上的一点点电荷决定 —— 读出来可能是 1，也可能下一秒变成 0。</p>
+  <p>所以除了“外部已经有确定的驱动源”这种场合，<strong>输入一律要选上拉或下拉</strong>。按键、开关、跳线帽都属于这一类。</p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ================= 实验二 ================= -->
+<section id="exp2">
+  <div class="secnum">04 / EXPERIMENT</div>
+  <h2>实验二：按键控制 LED</h2>
+  <p class="sub">输入的第一个真实场景：用一根线的电平，去决定另一根线的电平。</p>
+
+  <h3 id="btn-wire">两种接法</h3>
+  <p>机械按键本质上就是一个开关，靠开合改变引脚的电平。单片机把该引脚配成输入，读取高低电平来判断按键是否按下。</p>
+
+  <figure>
+    <img src="assets/in_05.png" alt="按键实物、符号，以及上拉接法下松开读到 1、按下读到 0">
+    <figcaption>上拉接法：松开经上拉读到 1，按下被短接到地读到 0</figcaption>
+  </figure>
+
+  <div class="grid">
+    <div class="card">
+      <span class="tag">低电平有效</span>
+      <h4>上拉接法</h4>
+      <p>按键一端接 GND，另一端接 GPIO，GPIO 内部或外部接上拉电阻到 V<sub>DD</sub>。<br>未按下 → 高电平 1；按下 → 短接到 GND，低电平 0。</p>
+    </div>
+    <div class="card">
+      <span class="tag">高电平有效</span>
+      <h4>下拉接法</h4>
+      <p>按键一端接 V<sub>DD</sub>，另一端接 GPIO，GPIO 接下拉电阻到 GND。<br>未按下 → 低电平 0；按下 → 高电平 1。</p>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <p><span class="lbl">不能这么接：</span>不要把按键直接跨接在 V<sub>DD</sub> 和 GND 之间。没有电阻限流，一按下就是电源短路，轻则复位，重则烧毁引脚。</p>
+  </div>
+
+  <h3 id="btn-hw">硬件与配置</h3>
+  <p>这个实验里，<code>PA9</code> 接按钮，<code>PC13</code> 的板载 LED 负责输出。PA9 配置为 <code>Input mode</code>，上下拉选 <code>Pull-up</code>（对应上面的上拉接法，按下读到 0）。</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>引脚</th><th>GPIO mode</th><th>Output level / Pull</th><th>效果</th></tr></thead>
+      <tbody>
+        <tr><td><code>PC13</code></td><td>Output Open Drain</td><td>Initial level = High</td><td>开漏输出，上电即为高阻 → 灯灭</td></tr>
+        <tr><td><code>PA9</code></td><td>Input mode</td><td>Pull-up</td><td>上拉输入，松开为 1，按下为 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <figure>
+    <img src="assets/in_07b.png" alt="PA9 配置为 Input mode，上下拉选择 Pull-up">
+    <figcaption>PA9：Input mode + Pull-up</figcaption>
+  </figure>
+
+  <h3 id="btn-code">代码</h3>
+  <p>思路很直白：在 <code>while(1)</code> 里不断读 PA9，读到 1 说明松开着，熄灭 LED；读到 0 说明按下，点亮 LED。</p>
+
+  <pre><code>while (1)
+{
+    if (PA9 == 1)          // 按键松开
+    {
+        PC13 = 1;          // 熄灭 LED
+    }
+    else                   // PA9 == 0，按键按下
+    {
+        PC13 = 0;          // 点亮 LED
+    }
+}</code></pre>
+
+  <p>把伪代码换成 HAL 接口，读电平用的是：</p>
+
+  <pre><code>GPIO_PinState HAL_GPIO_ReadPin(GPIOx, GPIO_Pin)</code></pre>
+
+  <dl class="kv">
+    <dt>GPIOx</dt><dd>组编号，x 取 A/B/C/D</dd>
+    <dt>GPIO_Pin</dt><dd>引脚编号，<code>GPIO_PIN_0</code> ~ <code>GPIO_PIN_15</code></dd>
+    <dt>返回值</dt><dd>读到的电平：<code>GPIO_PIN_RESET</code> = 0，<code>GPIO_PIN_SET</code> = 1</dd>
+  </dl>
+
+  <pre><code>while (1)
+{
+    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9) == GPIO_PIN_SET)   // 读到 1：松开
+    {
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);   // 熄灭 LED
+    }
+    else                                          // 读到 0：按下
+    {
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET); // 点亮 LED
+    }
+}</code></pre>
+
+  <div class="note">
+    <p><span class="lbl">还要消抖：</span>机械触点在按下和松开的一瞬间会快速弹跳几次，几毫秒内电平可能来回变。上面的轮询代码能跑通，但真实项目里通常要加消抖：检测到变化后延时 10 ms 左右再读一次确认，或者用定时器扫描。硬件上也可以在按键两端并一颗小电容。</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ================= 速查 ================= -->
+<section id="quickref">
+  <div class="secnum">05 / REFERENCE</div>
+  <h2>速查与易错点</h2>
+
+  <h3>三个接口</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>接口</th><th>作用</th><th>关键参数</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>HAL_GPIO_WritePin</code></td>
+          <td>向引脚写 0 / 1</td>
+          <td>组、引脚号、<code>RESET</code>(0) / <code>SET</code>(1)</td>
+        </tr>
+        <tr>
+          <td><code>HAL_GPIO_ReadPin</code></td>
+          <td>读引脚当前电平</td>
+          <td>组、引脚号；返回 <code>GPIO_PinState</code></td>
+        </tr>
+        <tr>
+          <td><code>HAL_Delay</code></td>
+          <td>毫秒级延时</td>
+          <td>毫秒数，<code>500</code> 即 0.5 秒</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>电平对照</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>场景</th><th>写 / 读到 0</th><th>写 / 读到 1</th></tr></thead>
+      <tbody>
+        <tr><td>PC13 板载 LED（开漏，阴极接引脚）</td><td>亮</td><td>灭</td></tr>
+        <tr><td>PA9 外接 LED（推挽，阳极接引脚）</td><td>灭</td><td>亮</td></tr>
+        <tr><td>PA9 按键（上拉，另一端接 GND）</td><td>按下</td><td>松开</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>容易踩的坑</h3>
+  <ul>
+    <li><strong>开漏指望着输出高电平。</strong>写 1 只是高阻，没有上拉电阻就量不到高电平，灯也不会亮。</li>
+    <li><strong>把板载灯当成“写 1 亮”。</strong>PC13 是开漏接法，写 0 才亮，和外接的 PA9 正好相反。</li>
+    <li><strong>LED 不接限流电阻。</strong>直接跨在电源和地之间，电流只受管子内阻限制，很容易烧灯或烧引脚。</li>
+    <li><strong>输入配成浮空。</strong>没有外部驱动时读数随机，按键会“自己乱跳”。</li>
+    <li><strong>复用模式下还去写 GPIO。</strong>控制权已经交给外设，再写数据寄存器不生效。</li>
+    <li><strong>速度档位一律选最高。</strong>边沿越陡，干扰越大；LED、按键用低速就够。</li>
+  </ul>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap layout" style="display:block">
+    <p>本页由《GPIO_输出方式与点灯实验》《GPIO_输入方式》两份笔记整理而成，插图为笔记原图。</p>
+    <p>STM32 · GPIO 输入输出 · 点灯与按键实验 · 下一篇：<a href="clock.html">时钟系统</a></p>
+  </div>
+</footer>
+
+<div class="lb" id="lb"><img alt=""></div>
+
+<script>
+(function () {
+  /* ---------- 代码高亮（从 textContent 重建，避免二次转义） ---------- */
+  var KW = /\b(while|if|else|for|return|void|int|uint8_t|uint16_t|uint32_t|break|continue)\b/g;
+  var MACRO = /\b(HAL_[A-Za-z_]+|GPIO_PIN_(?:SET|RESET)|GPIO_PIN_\d+|GPIO[A-D])\b/g;
+  var NUM = /(?<![A-Za-z_])\b(\d+)\b/g;
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlight(src) {
+    var parts = src.split(/(\/\/[^\n]*)/);
+    return parts.map(function (p, i) {
+      if (i % 2 === 1) return '<span class="c">' + esc(p) + '</span>';
+      var s = esc(p);
+      s = s.replace(MACRO, '<span class="m">$1</span>');
+      s = s.replace(KW, '<span class="k">$1</span>');
+      s = s.replace(NUM, '<span class="n">$1</span>');
+      return s;
+    }).join('');
+  }
+
+  document.querySelectorAll('pre > code').forEach(function (el) {
+    el.innerHTML = highlight(el.textContent.replace(/\s+$/, ''));
+  });
+
+  /* ---------- 图片灯箱 ---------- */
+  var lb = document.getElementById('lb');
+  var lbImg = lb.querySelector('img');
+  document.querySelectorAll('figure img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('open');
+    });
+  });
+  function close() { lb.classList.remove('open'); lbImg.src = ''; }
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  /* ---------- 目录高亮 ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var targets = Array.prototype.slice.call(document.querySelectorAll('main section[id], main h3[id]'));
+
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var a = byId[en.target.id];
+      if (!a) return;
+      links.forEach(function (x) { x.classList.remove('active'); });
+      a.classList.add('active');
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+
+  targets.forEach(function (t) { obs.observe(t); });
+
+})();
+</script>
+</body>
+</html>
