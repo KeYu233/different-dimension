@@ -2,6 +2,7 @@
 layout: post
 title: "我是谁？"
 date: 2026-11-13 14:47:00 +0800
+published: false
 column: "无心漫谈"
 column_url: "/wuxin-mantan/"
 ---
