@@ -41,6 +41,11 @@ title: Hi!!!我是柯宇！
     <p class="post-item-meta">帧结构 · 校验位 · 波特率 · USART1 与 USB 转 TTL</p>
     <p class="post-item-excerpt">两根线，一根发一根收，中间没有时钟线，两边只靠事先约好的波特率对齐节拍；把一帧数据拆到每一位上，再在 CubeMX 里配一个 115200 8N1。</p>
   </li>
+  <li class="post-item">
+    <h2 class="post-item-title"><a href="{{ '/stm32/exti.html' | relative_url }}">四、外部中断</a></h2>
+    <p class="post-item-meta">下降沿触发 · EXTI 与 NVIC · 按键消抖 · 从引脚到向量表</p>
+    <p class="post-item-excerpt">HAL_Delay(2000) 让 CPU 原地等两秒，这期间按下的键没有人处理。把方向反过来——让按键去打断主程序：CubeMX 里配哪三处，处理函数怎么写，抖动怎么去掉，一个下降沿从引脚到向量表要经过哪些环节。</p>
+  </li>
 </ul>
 
 # 无心漫谈

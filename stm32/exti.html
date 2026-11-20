@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>外部中断 · 电控学习笔记</title>
+<style>
+:root{
+  --ink:#16202a;
+  --muted:#5d6b78;
+  --faint:#8b98a3;
+  --line:#e4e8eb;
+  --bg:#fcfcfb;
+  --card:#ffffff;
+  --accent:#16607a;
+  --accent-soft:#eaf2f5;
+  --warn:#9a5a12;
+  --warn-soft:#fdf5e8;
+  --code-bg:#f7f8f9;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.78;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px}
+.layout{display:grid; grid-template-columns:206px minmax(0,1fr); gap:56px; align-items:start}
+main{max-width:780px; min-width:0; padding-bottom:40px}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 40px; border-bottom:1px solid var(--line)}
+.kicker{
+  font-size:12px; letter-spacing:.18em; color:var(--faint);
+  text-transform:uppercase; margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(28px,4.2vw,40px); line-height:1.3; font-weight:600;
+  letter-spacing:.01em; margin:0 0 16px;
+}
+.lede{font-size:17px; color:var(--muted); max-width:660px; margin:0 0 26px}
+.facts{display:flex; flex-wrap:wrap; gap:10px 28px; font-size:13.5px; color:var(--muted)}
+.facts b{color:var(--ink); font-weight:600}
+.hero-note{margin-top:22px; font-size:12.5px; color:var(--faint)}
+.hero-note a{color:var(--faint); border-bottom:1px solid var(--line)}
+.hero-note a:hover{color:var(--accent); text-decoration:none; border-bottom-color:var(--accent)}
+
+/* ---------- toc ---------- */
+.toc{position:sticky; top:26px; padding-top:56px; font-size:13.5px}
+.toc-title{font-size:11px; letter-spacing:.16em; color:var(--faint); margin-bottom:12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--line)}
+.toc li a{
+  display:block; padding:5px 0 5px 14px; margin-left:-1px;
+  border-left:2px solid transparent; color:var(--muted); line-height:1.5;
+}
+.toc li a:hover{color:var(--ink); text-decoration:none}
+.toc li a.active{color:var(--accent); border-left-color:var(--accent); font-weight:500}
+.toc li.sub a{padding-left:26px; font-size:12.8px; color:#7b8894}
+
+/* ---------- sections ---------- */
+main > section{padding-top:64px; scroll-margin-top:20px}
+.secnum{
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:12px; letter-spacing:.14em; color:var(--accent); margin-bottom:10px;
+}
+h2{font-size:24px; font-weight:600; margin:0 0 8px; letter-spacing:.01em}
+h3{font-size:17.5px; font-weight:600; margin:40px 0 10px}
+h3::before{content:""; display:inline-block; width:14px; height:1px; background:var(--accent);
+  vertical-align:middle; margin-right:10px; transform:translateY(-2px)}
+h4{font-size:15px; font-weight:600; margin:24px 0 6px; color:var(--ink)}
+p{margin:12px 0}
+.sub{color:var(--muted); font-size:14.5px; margin-top:0}
+ul,ol{margin:12px 0; padding-left:22px}
+li{margin:6px 0}
+li::marker{color:var(--faint)}
+strong{font-weight:600}
+code{
+  font-family:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono",monospace;
+  font-size:.9em; background:#f1f3f4; padding:1px 5px; border-radius:4px;
+  color:#0f3d4d;
+}
+
+/* ---------- figures ---------- */
+figure{margin:26px 0}
+figure img{
+  display:block; width:100%; height:auto; background:#fff;
+  border:1px solid var(--line); border-radius:8px; cursor:zoom-in;
+}
+figure.small img{max-width:520px; margin:0 auto}
+figure.tiny img{max-width:400px; margin:0 auto}
+figcaption{
+  font-size:12.8px; color:var(--faint); text-align:center;
+  margin-top:10px; line-height:1.6;
+}
+.figrow{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:26px 0; align-items:end}
+.figrow figure{margin:0}
+.figrow figcaption{font-size:12.5px}
+.figrow.wide{grid-template-columns:1.35fr 1fr}
+.figrow.narrow{grid-template-columns:1fr 1.35fr}
+.figrow figure img{width:100%}
+
+/* ---------- video ---------- */
+figure.video video{
+  display:block; width:100%; height:auto; max-height:540px; object-fit:contain;
+  background:#0f1519; border:1px solid var(--line); border-radius:8px;
+}
+figure.video.portrait video{max-width:420px; margin:0 auto}
+figure.video figcaption{font-size:12.8px}
+.videotag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-weight:600; font-size:13px; color:var(--muted); border-bottom:1px solid #cfd6db;
+  white-space:nowrap; letter-spacing:.02em}
+tbody tr:hover{background:#fafbfb}
+td code{background:none; padding:0; color:inherit; font-size:13.2px}
+.tnum{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ---------- cards ---------- */
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:22px 0}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:18px 20px; font-size:14.5px; line-height:1.7;
+}
+.card h4{margin:0 0 6px; font-size:14.5px}
+.card p{margin:0; color:var(--muted); font-size:14px}
+.card .tag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+.card .tag.warn{color:var(--warn); background:var(--warn-soft)}
+
+/* ---------- callout ---------- */
+.note{
+  margin:24px 0; padding:14px 18px; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 8px 8px 0; font-size:14.5px;
+}
+.note.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.note p{margin:0}
+.note p + p{margin-top:8px}
+.note .lbl{font-weight:600; margin-right:2px; color:var(--accent)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- code ---------- */
+pre{
+  margin:20px 0; padding:16px 18px; background:var(--code-bg);
+  border:1px solid var(--line); border-radius:8px; overflow-x:auto;
+  font-size:13.2px; line-height:1.7;
+}
+pre code{background:none; padding:0; font-size:inherit; color:#22303a}
+.k{color:#8b3fa8}
+.f{color:#16607a}
+.n{color:#a05c11}
+.c{color:#8b98a3; font-style:normal}
+.m{color:#2b6b4f}
+
+/* ---------- misc ---------- */
+.divider{height:1px; background:var(--line); margin:56px 0 0}
+.kv{display:grid; grid-template-columns:132px 1fr; gap:4px 18px; font-size:14.5px; margin:18px 0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+footer{
+  border-top:1px solid var(--line); margin-top:80px; padding:28px 0 60px;
+  font-size:13px; color:var(--faint);
+}
+footer p{margin:4px 0}
+
+/* ---------- lightbox ---------- */
+.lb{
+  position:fixed; inset:0; background:rgba(16,24,30,.9); display:none;
+  align-items:center; justify-content:center; padding:4vw; z-index:50; cursor:zoom-out;
+}
+.lb.open{display:flex}
+.lb img{max-width:100%; max-height:100%; background:#fff; border-radius:6px}
+
+/* ---------- responsive ---------- */
+@media (max-width:960px){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .toc{display:none}
+  .hero{padding:44px 0 30px}
+  .wrap{padding:0 20px}
+  main > section{padding-top:48px}
+  .grid,.grid.three,.figrow{grid-template-columns:1fr}
+  .figrow{gap:26px}
+  h2{font-size:21px}
+  .kv{grid-template-columns:100px 1fr}
+}
+@media print{
+  .toc,.lb{display:none}
+  body{background:#fff}
+  .hero{padding-top:0}
+  main > section{page-break-inside:auto}
+  figure{page-break-inside:avoid}
+}
+
+/* —— 博客返回入口（整进「异乡之翼」时加的，非原文） —— */
+.gf-home{position:fixed; top:14px; right:16px; z-index:60; padding:6px 14px; border-radius:999px;
+  border:1px solid var(--line); background:rgba(255,255,255,.92); color:var(--muted);
+  font-size:12.5px; letter-spacing:.04em; box-shadow:0 2px 10px rgba(22,32,42,.08);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.gf-home:hover{color:var(--accent); border-color:var(--accent); background:#fff}
+@media (max-width:640px){.gf-home{top:10px; right:10px; padding:5px 11px; font-size:12px}}
+@media print{.gf-home{display:none}}
+
+/* —— 本页补充：寄存器位条（原文没有，用来代替「第几位是几」的口头描述） —— */
+.bits{display:flex; flex-wrap:wrap; gap:4px; margin:16px 0 8px}
+.bits span{
+  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px;
+  color:var(--muted); background:#fff; border:1px solid var(--line); border-radius:4px;
+  font-variant-numeric:tabular-nums;
+}
+.bits span.on{
+  background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;
+}
+.bits.four span{width:34px}
+.bits span.off{border-style:dashed; color:var(--faint); background:#fff}
+.bits-cap{font-size:12.8px; color:var(--faint); margin:0 0 20px; text-align:center}
+
+/* 目录比其它页长，视口矮时给它自己一条滚动条 */
+.toc{max-height:calc(100vh - 52px); overflow-y:auto; scrollbar-width:thin}
+.toc::-webkit-scrollbar{width:4px}
+.toc::-webkit-scrollbar-thumb{background:#dfe4e8; border-radius:2px}
+</style>
+</head>
+<body>
+
+<a class="gf-home" href="../">&larr; 异乡之翼</a>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">电控学习笔记 · STM32 · 04</div>
+    <h1>外部中断</h1>
+    <p class="lede">HAL_Delay(2000) 会让 CPU 原地等两秒，这两秒里按下的键没有人处理。中断要解决的就是这个：主程序停在那一行，CPU 转去执行你事先写好的一小段代码，执行完再回到停下的地方。下面是一条完整的实验记录——CubeMX 里配了什么，处理函数怎么写，抖动怎么去掉，以及一个下降沿从引脚到 NVIC 要经过哪些环节。</p>
+    <div class="facts">
+      <span><b>触发</b> PB12 按键 · 下降沿</span>
+      <span><b>响应</b> EXTI15_10_IRQHandler · 末尾清挂起位</span>
+      <span><b>实验</b> 绿灯 2 秒一个周期 · 红灯随按键</span>
+    </div>
+    <div class="hero-note">整理自《检测 GPIO 电平变化的中断——外部中断》笔记，附实机录像 · 上一篇：<a href="uart.html">串口通信</a></div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+<aside class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#model">一、中断在程序里长什么样</a></li>
+    <li><a href="#problem">二、先看这个实验要什么</a></li>
+    <li class="sub"><a href="#led">两盏灯</a></li>
+    <li class="sub"><a href="#why">轮询为什么行不通</a></li>
+    <li><a href="#cubemx">三、CubeMX 里要动的三处</a></li>
+    <li class="sub"><a href="#pin">引脚：PB12 交给 EXTI12</a></li>
+    <li class="sub"><a href="#gpio">GPIO 参数：浮空与下降沿</a></li>
+    <li class="sub"><a href="#nvic">NVIC：放行这条中断线</a></li>
+    <li><a href="#handler">四、被打断之后跑的那段代码</a></li>
+    <li class="sub"><a href="#first">第一版：翻转电平</a></li>
+    <li><a href="#bounce">五、按键会抖</a></li>
+    <li class="sub"><a href="#debounce">先等 10ms</a></li>
+    <li><a href="#demo">六、实机跑一遍</a></li>
+    <li><a href="#signal">七、一个下降沿经过哪几步</a></li>
+    <li class="sub"><a href="#driver">输入驱动器</a></li>
+    <li class="sub"><a href="#exti">进 EXTI</a></li>
+    <li class="sub"><a href="#edge">边沿检测听谁的</a></li>
+    <li class="sub"><a href="#pending">挂起位</a></li>
+    <li class="sub"><a href="#mask">屏蔽位</a></li>
+    <li class="sub"><a href="#vector">向量表</a></li>
+    <li class="sub"><a href="#clear">清挂起位</a></li>
+    <li><a href="#priority">八、优先级与 HAL_Delay 的卡死</a></li>
+    <li class="sub"><a href="#rule">谁先跑</a></li>
+    <li class="sub"><a href="#deadlock">HAL_Delay 怎么卡死的</a></li>
+    <li><a href="#quickref">九、速查</a></li>
+  </ol>
+</aside>
+
+<main>
+
+<!-- ================= 01 ================= -->
+<section id="model">
+  <div class="secnum">01 / MODEL</div>
+  <h2>中断在程序里长什么样</h2>
+  <p class="sub">先分清图里标红的两处，后面讲的寄存器都围绕它们展开。</p>
+
+  <p>竖线表示常规程序的执行流程：一直往下执行，中途左侧出现一个突发事件，程序转去执行右边方框里的代码，执行完再回到原来的位置继续。</p>
+
+  <figure>
+    <img style="max-width:486px;margin:0 auto" width="486" height="436" src="assets/exti/fig01-model.png" alt="单片机中断模型示意图：常规程序被突发事件打断，转去执行中断响应函数再返回">
+    <figcaption>红色虚线框标出两处：右边那段代码是中断响应函数，左边箭头是中断源。竖线上下两段是同一段常规程序，中间空出的部分就是中断占用的时间。</figcaption>
+  </figure>
+
+  <p>写一段中断程序需要两样东西：一个能触发它的来源（这里是按键），一段足够短的响应代码（这里是翻转一个引脚）。图里的返回箭头要留意——中断执行完回到被打断的那一行，不是从头再来。这一层切换由硬件和编译器完成，写代码时不必处理，但它决定了后面那些寄存器各自管什么。</p>
+</section>
+
+<!-- ================= 02 ================= -->
+<section id="problem">
+  <div class="secnum">02 / PROBLEM</div>
+  <h2>先看这个实验要什么</h2>
+  <p class="sub">两盏 LED：一盏自己闪，一盏受按键控制。先用最直接的写法试一遍，问题会显出来。</p>
+
+  <h3 id="led">两盏灯</h3>
+  <p>一红一绿两盏 LED：绿灯亮两秒、灭两秒，红灯受按键控制，按一下亮，再按一下暗。绿灯那部分按最基础写 GPIO 电平的思路，写在 while 循环里：</p>
+
+<pre><code>while (1)
+{
+    HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
+    HAL_Delay(2000);
+    HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+    HAL_Delay(2000);
+}</code></pre>
+
+  <p>卡住的地方就在 <code>HAL_Delay(2000)</code>。这两秒里 CPU 耗在等待上，while 循环里排在后面的代码全部停着。如果把红灯的判断顺着写下去，按下按键的那一刻程序正卡在 Delay 里，等它返回早就错过了——灯该亮的时候没亮，实际反应完全不对。</p>
+
+  <h3 id="why">轮询为什么行不通</h3>
+  <p>轮询的写法解决不了这件事：主程序卡在 Delay 里，就没有余力同时读引脚。换句话说，<code>while(1)</code> 里同一时刻只能推进一件事，两件事要各按各的节奏走，就得让其中一件能打断另一件。</p>
+  <p>中断把方向反过来：不是主程序去问按键，而是按键来打断主程序。</p>
+</section>
+
+<!-- ================= 03 ================= -->
+<section id="cubemx">
+  <div class="secnum">03 / CUBEMX</div>
+  <h2>CubeMX 里要动的三处</h2>
+  <p class="sub">新建工程、选好芯片之后，这次配置落在三个地方：引脚、GPIO 参数、NVIC。</p>
+
+  <h3 id="pin">引脚：PB12 交给 EXTI12</h3>
+  <p>在芯片图上找到 PB12，左键点开功能列表，选 <code>GPIO_EXTI12</code>。这一项在列表最底下，选中后引脚变绿，右边出现 KEY1——这是给引脚起的标签，生成代码时会变成 <code>KEY1_Pin</code> 和 <code>KEY1_GPIO_Port</code> 两个宏，代码里不必到处写端口号和引脚号，方便阅读程序。</p>
+
+  <figure class="small">
+    <img style="max-width:199px;margin:0 auto" width="199" height="268" src="assets/exti/fig02-cubemx-pin.png" alt="CubeMX 引脚 PB12 的功能下拉列表，最后一项 GPIO_EXTI12 被选中">
+    <figcaption>列表最后一项就是 GPIO_EXTI12，选中后引脚变绿，右边多出 KEY1 标签</figcaption>
+  </figure>
+
+  <h3 id="gpio">GPIO 参数：浮空 + 下降沿</h3>
+  <p>接着在左侧 GPIO 设置里改两行。GPIO mode 一共有六个选项，前三个以 External Interrupt 开头，后三个是 External Event。两者的区别在于结果要不要通知 CPU：事件那条路经脉冲发生器，不进 NVIC，这个实验用不上。</p>
+
+  <figure>
+    <img style="max-width:742px;margin:0 auto" width="742" height="213" src="assets/exti/fig03-gpio-mode-list.png" alt="CubeMX 的 GPIO mode 下拉框，六个选项：三种中断模式与三种事件模式">
+    <figcaption>六个选项：三个 External Interrupt Mode，三个 External Event Mode</figcaption>
+  </figure>
+
+  <p>前三个中断选项的注释分别是上升沿、下降沿、上升/下降沿都触发：</p>
+
+  <figure class="small">
+    <img style="max-width:721px;margin:0 auto" width="721" height="160" src="assets/exti/fig04-gpio-mode-annotated.png" alt="三种中断模式的注释：上升沿触发、下降沿触发、上升下降沿都触发">
+    <figcaption>三种中断模式的区别只在认哪种边沿：上升沿、下降沿、两种都认</figcaption>
+  </figure>
+
+  <p>这次用下降沿。原因在电路上：</p>
+
+  <figure>
+    <img style="max-width:424px;margin:0 auto" width="424" height="181" src="assets/exti/fig05-button-circuit.png" alt="按键电路：3.3V 经 10K 电阻接到 PB12，按键另一端接地，下面并 100nF 电容；右侧为按下时的电平波形">
+    <figcaption>左边是电路：PB12 经一只 10K 电阻上拉到 3.3V，按键另一端接地。右边红线是按下时的电平，从 3.3V 落到 0V，这个下降沿就是触发中断的信号。</figcaption>
+  </figure>
+
+  <p>松开时引脚被拉高，按下时接到地，电平从高变低，所以选 <strong>External Interrupt Mode with Falling edge trigger detection</strong>。同一块面板上的 GPIO Pull-up/Pull-down 选 Floating：外部已经有 10K 上拉，芯片内部不必再挂。</p>
+
+  <div class="note">
+    <p><span class="lbl">电路图上的 C16：</span>按键两端还并了一只 100nF 电容，是配套学习套件带的硬件消抖。手上没有配套板子的话可以不用它，第 5 节的软件消抖处理的是同一件事。</p>
+  </div>
+
+  <h3 id="nvic">NVIC：放行这条中断线</h3>
+  <p>进 NVIC 面板，表格里找到 <strong>EXTI line[15:10] interrupts</strong>，把 Enabled 勾上。不勾这一项，边沿检测和挂起位都照常工作，信号到 NVIC 就进不来了。</p>
+  <p>同一张表里还有一行 <strong>Time base: System tick timer</strong>，它的 Preemption Priority 要小于 EXTI 那一行。这次 SysTick 留 0，EXTI 设 1。这条设置单独看不容易明白，第 8 节会讲清它的作用——设反了，中断里调 <code>HAL_Delay</code> 会把板子卡死。</p>
+
+  <figure>
+    <img style="max-width:894px;margin:0 auto" width="894" height="447" src="assets/exti/fig06-nvic.png" alt="CubeMX 的 NVIC 中断表，SysTick 与 EXTI line[15:10] 两行被红框标出，抢占优先级分别是 0 和 1">
+    <figcaption>两行红框：上框 SysTick 抢占优先级 0，下框 EXTI line[15:10] 抢占优先级 1。数字小的先跑，所以 SysTick 能打断按键中断</figcaption>
+  </figure>
+</section>
+
+<!-- ================= 04 ================= -->
+<section id="handler">
+  <div class="secnum">04 / HANDLER</div>
+  <h2>被打断之后跑的那段代码</h2>
+  <p class="sub">CubeMX 生成的空函数摆在那儿，要动的就是 USER CODE 之间的几行。</p>
+
+  <p>生成代码后，<code>stm32f1xx_it.c</code> 里会多出一个空函数 <code>EXTI15_10_IRQHandler</code>。按键按下时执行的就是它。名字里没有 12，因为 EXTI10 到 EXTI15 共用一条向量，这六条线都由这一个函数处理。</p>
+
+<pre><code>void EXTI15_10_IRQHandler(void)
+{
+    /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+    HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+    /* USER CODE END EXTI15_10_IRQn 0 */
+    HAL_GPIO_EXTI_IRQHandler(KEY1_Pin);
+    /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+    /* USER CODE END EXTI15_10_IRQn 1 */
+}</code></pre>
+
+  <p>自己写的代码必须落在 USER CODE BEGIN 和 END 之间。CubeMX 重新生成工程时只保留这块内容，写在别处的代码会被覆盖掉。<code>HAL_GPIO_TogglePin</code> 把引脚输出翻转，亮变暗、暗变亮，按键控制红灯的逻辑就这一句。下面那行 <code>HAL_GPIO_EXTI_IRQHandler(KEY1_Pin)</code> 是模板自带的，它的作用在第 7 节末尾会讲到。</p>
+
+  <h3 id="first">第一版：翻转电平</h3>
+  <p>这样写出来，绿灯还在按自己的节奏亮灭，红灯随时能按。原因是中断占用的时间很短：主程序的执行被分成几段，中间夹着几次中断处理，之后接着往下执行。</p>
+
+  <figure class="small">
+    <img style="max-width:706px;margin:0 auto" width="706" height="244" src="assets/exti/fig09-toggle.png" alt="Keil 编辑器中的中断处理函数，USER CODE 之间写入一行 HAL_GPIO_TogglePin">
+    <figcaption>第一版在编辑器里就这一行。截图里翻的是 LED_GREEN 那一组宏，你工程里按键控制哪盏灯，宏名跟接线对上就行，别照着抄</figcaption>
+  </figure>
+
+  <figure>
+    <img style="max-width:907px;margin:0 auto" width="907" height="156" src="assets/exti/fig08-timeline.png" alt="时间轴：绿色长条是正常执行的流程，被两次 EXTI12 中断切成三段">
+    <figcaption>绿色是正常执行的流程，两道橙色竖线是两次按键中断。中断只占用很短一段，其余时间照旧留给主程序，所以绿灯看不出停顿</figcaption>
+  </figure>
+</section>
+
+<!-- ================= 05 ================= -->
+<section id="bounce">
+  <div class="secnum">05 / BOUNCE</div>
+  <h2>按键会抖</h2>
+  <p class="sub">机械触点在闭合的那几毫秒里会弹跳，一次按压可能被当成好几次中断。</p>
+
+  <p>第一版能跑，但实际按下时反应不对。按下和抬起的那几毫秒里触点会弹跳，引脚上收到的是一串下降沿，中断不止进一次，灯可能亮暗两下——表面上看就是「按一下，有时候亮有时候不亮」。</p>
+
+  <figure class="small">
+    <img style="max-width:487px;margin:0 auto" width="487" height="226" src="assets/exti/fig11-bounce.png" alt="按下与抬起时各有一段约十几毫秒的抖动波形，中间是按住不放的低电平">
+    <figcaption>按下和抬起各有一段十几毫秒的抖动，中间那段平的是按住不放的时间</figcaption>
+  </figure>
+
+  <h3 id="debounce">先等 10ms</h3>
+  <p>处理办法是等一段时间：进中断先 <code>HAL_Delay(10)</code> 把抖动那一段等过去，再读一次引脚，仍然是低电平才认为真的按下了。</p>
+
+<pre><code>void EXTI15_10_IRQHandler(void)
+{
+    /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+    HAL_Delay(10);
+    if (HAL_GPIO_ReadPin(KEY1_GPIO_Port, KEY1_Pin) == GPIO_PIN_RESET) {
+        HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+    }
+    /* USER CODE END EXTI15_10_IRQn 0 */
+    HAL_GPIO_EXTI_IRQHandler(KEY1_Pin);
+    /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+    /* USER CODE END EXTI15_10_IRQn 1 */
+}</code></pre>
+
+  <figure class="small">
+    <img style="max-width:646px;margin:0 auto" width="646" height="289" src="assets/exti/fig10-debounce.png" alt="消抖后的中断处理函数：HAL_Delay(10) 后读引脚，为低电平才翻转">
+    <figcaption>消抖之后的完整函数：先等 10ms，再确认引脚仍是低电平，才翻转</figcaption>
+  </figure>
+
+  <p>这段代码能成立，前提是中断里 <code>HAL_Delay</code> 可以使用——也就是第 3 节里那两个优先级没有设反。原因在第 7 节的寄存器链路和第 8 节的优先级里。</p>
+</section>
+
+<!-- ================= 06 ================= -->
+<section id="demo">
+  <div class="secnum">06 / DEMO</div>
+  <h2>实机跑一遍</h2>
+  <p class="sub">功能对了之后录了一段：绿灯照旧闪，红灯按一下变一次。</p>
+
+  <p>接上面包板录了一段：绿灯亮两秒灭两秒，手指按下去红灯换一个状态，绿灯那边没有停顿，也没有出现按一下跳两下的情况。视频 10 秒，手机竖屏拍的。</p>
+
+  <figure class="video portrait">
+    <video controls preload="metadata" playsinline poster="assets/video/exti-demo-poster.jpg">
+      <source src="assets/video/exti-demo.mp4" type="video/mp4">
+      你的浏览器不支持 video 标签，可以直接打开 <a href="assets/video/exti-demo.mp4">这段视频</a>。
+    </video>
+    <figcaption>实拍 · 绿灯 2 秒一个周期，红灯随按键切换。看的时候把注意力放在绿灯上，按键那一下它的节奏没有受到影响</figcaption>
+  </figure>
+</section>
+
+<!-- ================= 07 ================= -->
+<section id="signal">
+  <div class="secnum">07 / SIGNAL</div>
+  <h2>一个下降沿经过哪几步</h2>
+  <p class="sub">功能到这里就对了。剩下的问题是：为什么一定要在 NVIC 里动那两处设置。往回看，信号进入芯片之后经过哪些环节。</p>
+
+  <p>这些环节看完，CubeMX 里那几个勾选分别落在哪个寄存器上，也就清楚了。</p>
+
+  <h3 id="driver">第一步：GPIO 的输入驱动器</h3>
+  <p>PB12 在芯片内部对应下面这一套结构。信号从右边的 I/O 引脚进来，先经过两只保护二极管，再进入虚线框里的输入驱动器。驱动器中间那两个开关就是上拉和下拉电阻——CubeMX 里选 Floating，等于两个开关都断开，引脚电平由外部那颗 10K 电阻决定。</p>
+
+  <figure class="small">
+    <img style="max-width:520px;margin:0 auto" width="520" height="310" src="assets/exti/fig12-gpio-structure.png" alt="GPIO 内部结构框图：输入驱动器、输出驱动器、数据寄存器与保护二极管">
+    <figcaption>一个 GPIO 的全貌。上半部分是输入方向，下半部分是输出方向，左边那一列是各种数据寄存器和复用功能</figcaption>
+  </figure>
+
+  <p>接着经过 TTL 肖特基触发器，也就是施密特触发器，把带毛刺的模拟波形整理成干净的高低电平。整理完才分成两路：一路进输入数据寄存器（CPU 读 IDR 时看到的值），一路去片上外设。</p>
+
+  <div class="figrow">
+    <figure>
+      <img style="max-width:507px;margin:0 auto" width="507" height="199" src="assets/exti/fig13-input-driver.png" alt="黄色高亮路径：信号从 I/O 引脚进入输入驱动器">
+      <figcaption>信号进到输入驱动器</figcaption>
+    </figure>
+    <figure>
+      <img style="max-width:649px;margin:0 auto" width="649" height="298" src="assets/exti/fig14-schmitt.png" alt="黄色高亮路径：穿过施密特触发器后分成两路，一路进输入数据寄存器，一路去片上外设">
+      <figcaption>穿过施密特触发器，波形被整理成干净的高低电平，再分成两路</figcaption>
+    </figure>
+  </div>
+
+  <p>后一路是复用功能的由来：引脚除了能被 CPU 读，还能直接送给片上外设，串口的异步接收就是这么取得电平的。</p>
+
+  <h3 id="exti">第二步：进 EXTI</h3>
+  <p>从输入驱动器出来，信号还会到达另一个结构：外部中断/事件控制器（EXTI）。下面这张是它的内部。输入线从右边进来，先经过边沿检测电路，往上分到两个触发选择寄存器；认出指定的边沿以后，信号向左经或门到请求挂起寄存器，再经与门到 NVIC。下面那条支路通往脉冲发生器，那是「事件」而不是「中断」，不进 CPU。</p>
+
+  <figure class="small">
+    <img style="max-width:594px;margin:0 auto" width="594" height="345" src="assets/exti/fig15-exti-block.png" alt="EXTI 内部框图：边沿检测、上升沿与下降沿触发选择寄存器、软件中断事件寄存器、请求挂起寄存器、中断屏蔽寄存器、脉冲发生器">
+    <figcaption>EXTI 的内部。右边是输入线，左边是 NVIC，中间这一串就是这次要逐段看清的部分</figcaption>
+  </figure>
+
+  <p>STM32F1 里这样的线有 19 条，每条都配一套这样的寄存器。前 16 条是 EXTI0 到 EXTI15，编号和 GPIO 端口的编号对应：PA0、PB0、PC0 都接到 EXTI0，PB12 接的就是 EXTI12。</p>
+
+  <figure class="small">
+    <img style="max-width:627px;margin:0 auto" width="627" height="345" src="assets/exti/fig16-exti-x19.png" alt="EXTI 框图标注了 ×19，表示同一套结构复制了 19 份">
+    <figcaption>×19 标出的是同一套结构复制了 19 份。所以「第 12 位」这种说法，指的是这一套寄存器里对应 EXTI12 的那一位</figcaption>
+  </figure>
+
+  <h3 id="edge">第三步：边沿检测听谁的</h3>
+  <p>边沿检测电路认哪种跳变，由两个寄存器说了算：上升沿触发选择寄存器和下降沿触发选择寄存器。CubeMX 里 GPIO mode 选的那一项，落到硬件上就是这两个寄存器里的两位。</p>
+
+  <figure class="small">
+    <img style="max-width:277px;margin:0 auto" width="277" height="259" src="assets/exti/fig17-edge-detect.png" alt="边沿检测电路与上方的上升沿、下降沿触发选择寄存器">
+    <figcaption>边沿检测电路的两个输入，分别来自上升沿和下降沿触发选择寄存器</figcaption>
+  </figure>
+
+  <p>这次配的是下降沿触发，所以第 12 位在上升沿寄存器里是 0，在下降沿寄存器里是 1：</p>
+
+  <div class="bits"><span>15</span><span>14</span><span>13</span><span class="off">12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span></div>
+  <p class="bits-cap">上升沿触发选择寄存器：bit12 = 0，不认上升沿</p>
+
+  <div class="bits"><span>15</span><span>14</span><span>13</span><span class="on">12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span></div>
+  <p class="bits-cap">下降沿触发选择寄存器：bit12 = 1，认下降沿</p>
+
+  <figure class="tiny">
+    <img style="max-width:322px;margin:0 auto" width="322" height="121" src="assets/exti/fig18-edge-bits.png" alt="两个寄存器的位图，上升沿那行第 12 位标红 0，下降沿那行第 12 位标绿 1">
+    <figcaption>截图里红色的 0 和绿色的 1，对应的就是上面两根位条</figcaption>
+  </figure>
+
+  <h3 id="pending">第四步：挂起位</h3>
+  <p>检测到下降沿之后，电路往后送一个高电平，经或门抵达请求挂起寄存器，第 12 位置 1。或门的另一个输入接软件中断事件寄存器——那是用程序模拟一次中断的入口，这次实验用不到它。</p>
+
+  <div class="figrow">
+    <figure>
+      <img style="max-width:309px;margin:0 auto" width="309" height="283" src="assets/exti/fig19-or-gate.png" alt="或门把边沿检测结果与软件中断事件送入请求挂起寄存器">
+      <figcaption>或门：两个输入有一个为 1 就输出 1</figcaption>
+    </figure>
+    <figure>
+      <img style="max-width:175px;margin:0 auto" width="175" height="127" src="assets/exti/fig20-pending-bit.png" alt="请求挂起寄存器的第 12 位被置为 1">
+      <figcaption>挂起寄存器的第 12 位变 1，表示「有事件发生」</figcaption>
+    </figure>
+  </div>
+
+  <h3 id="mask">第五步：屏蔽位</h3>
+  <p>挂起位只说明有事件发生，能不能通知 CPU 还要看与门另一头：中断屏蔽寄存器的第 12 位。这一位也是 1，高电平才过得去；否则信号到此为止，CPU 不会知道。</p>
+
+  <div class="figrow">
+    <figure>
+      <img style="max-width:297px;margin:0 auto" width="297" height="166" src="assets/exti/fig21-and-gate.png" alt="请求挂起信号送入与门，另一路来自中断屏蔽寄存器">
+      <figcaption>挂起位送到与门</figcaption>
+    </figure>
+    <figure>
+      <img style="max-width:325px;margin:0 auto" width="325" height="142" src="assets/exti/fig22-mask-bit.png" alt="中断屏蔽寄存器第 12 位为 1，与门输出绿色高电平继续送往 NVIC">
+      <figcaption>屏蔽位为 1，与门才放行，信号继续往 NVIC 走</figcaption>
+    </figure>
+  </div>
+
+  <p>所以这里有两处独立的设置：触发方式决定「哪种边沿算数」，屏蔽位决定「算数的事件要不要报给 CPU」。CubeMX 的 NVIC 面板那一勾排在这两者之后，管的是 NVIC 收不收这条线。</p>
+
+  <h3 id="vector">第六步：向量表</h3>
+  <p>经过与门之后，信号进入 NVIC。NVIC 里有一张中断向量表，每一行是一个中断源和它对应的处理函数。EXTI0 到 EXTI4 各自占一行；EXTI5 到 EXTI9 合并成一行，EXTI10 到 EXTI15 合并成另一行。这就解释了为什么 PB12（EXTI12）触发的是 <code>EXTI15_10_IRQHandler</code>，而不是什么 <code>EXTI12_IRQHandler</code>。</p>
+
+  <figure class="small">
+    <img style="max-width:447px;margin:0 auto" width="447" height="292" src="assets/exti/fig23-vector-table.png" alt="中断向量表对照：EXTI0 到 EXTI4 各自独立，EXTI9_5 与 EXTI15_10 为合并项">
+    <figcaption>左边是中断源，右边是它指向的处理函数。中间合并的那几行，就是「共用一条向量」的意思</figcaption>
+  </figure>
+
+  <h3 id="clear">最后：把挂起位清掉</h3>
+  <p>NVIC 会一直检查这条线是否还处于激活状态。处理函数执行完，挂起位如果还是 1，函数会被再调用一次，接着再调用一次。所以要在这个函数末尾清挂起位。CubeMX 生成的工程已经把这一步写好了，就是那行 <code>HAL_GPIO_EXTI_IRQHandler(KEY1_Pin)</code>。它内部先判断这一位有没有置起，然后调用 <code>__HAL_GPIO_EXTI_CLEAR_IT</code> 清除，最后进回调：</p>
+
+  <figure class="small">
+    <img style="max-width:441px;margin:0 auto" width="441" height="214" src="assets/exti/fig24-exti-irqhandler-src.png" alt="HAL_GPIO_EXTI_IRQHandler 源码：判断 EXTI 中断标志，调用 __HAL_GPIO_EXTI_CLEAR_IT，再调回调">
+    <figcaption>函数内部先判断这一位有没有置起，然后调用 __HAL_GPIO_EXTI_CLEAR_IT 清除，最后进回调</figcaption>
+  </figure>
+
+  <p>也正因为清挂起位在函数末尾，自己写的业务代码才要放在 USER CODE BEGIN … 0 那一段——模板留的位置就在清除挂起位之前。</p>
+</section>
+
+<!-- ================= 08 ================= -->
+<section id="priority">
+  <div class="secnum">08 / PRIORITY</div>
+  <h2>优先级与 HAL_Delay 的卡死</h2>
+  <p class="sub">两个中断同时到来时谁先执行，以及这个顺序为什么会把 HAL_Delay 变成死循环。</p>
+
+  <h3 id="rule">谁先跑</h3>
+  <p>两个中断同时到达，或者一个正在执行、另一个进来，谁先谁后由优先级决定。STM32 把优先级分成两层：抢占优先级（Preemption）和响应优先级（Sub）。两个数字都是越小越优先，和平时读数字的习惯相反，容易记反。</p>
+  <p>两个中断同时到：先比抢占优先级，数字小的先执行；抢占相同，再比响应优先级；两层都相同，就按向量表里的先后顺序。</p>
+  <p>A 正在执行，B 突然到来，这时只看抢占优先级。B 的数字比 A 小，A 就地停下，B 执行完再回来继续执行 A；B 不比 A 优先，B 只能等 A 整段执行完再开始。</p>
+
+  <div class="figrow">
+    <figure>
+      <img style="max-width:637px;margin:0 auto" width="637" height="190" src="assets/exti/fig25-preempt.png" alt="时序图：A 中断处理到一半被 B 抢占，B 跑完后 A 继续">
+      <figcaption>B 抢占 A：A 被分成两段，中间是 B</figcaption>
+    </figure>
+    <figure>
+      <img style="max-width:643px;margin:0 auto" width="643" height="325" src="assets/exti/fig26-no-preempt.png" alt="时序图：A 中断完整跑完之后 B 才开始">
+      <figcaption>B 不占优：A 执行完一段，B 才开始</figcaption>
+    </figure>
+  </div>
+
+  <h3 id="deadlock">HAL_Delay 怎么卡死的</h3>
+  <p><code>HAL_Delay</code> 的问题在这层关系里。它不靠空循环计数，靠的是 SysTick：系统运行起来后，SysTick 每 1ms 进一次中断，HAL 库在这时把一个全局变量 <code>uwTick</code> 加一。<code>HAL_Delay</code> 记下进入时的值，然后在 while 里反复检查 <code>uwTick</code> 增加得够不够。</p>
+
+<pre><code>/* 简化后的逻辑，不是库里的原码 */
+void HAL_Delay(uint32_t Delay)
+{
+    uint32_t tickstart = HAL_GetTick();  // 记下进门前毫秒数
+    uint32_t wait = Delay;
+    while ((HAL_GetTick() - tickstart) &lt; wait) {
+        // 在这里等，等 SysTick 把 uwTick 推上去
+    }
+}</code></pre>
+
+  <p>如果当前这个按键中断的抢占优先级不低于 SysTick——数字更小、或者相同——SysTick 就进不来，<code>uwTick</code> 停在原地，while 永远等不到条件成立。程序卡在这句 <code>HAL_Delay(10)</code> 上出不来，表现是整个板子没有反应。</p>
+
+  <div class="note warn">
+    <p><span class="lbl">两处优先级的作用：</span>第 3 节里 SysTick 设 0、EXTI 设 1，目的都是让 SysTick 能抢占按键中断，中断里那个 10ms 的等待才能正常结束。反过来配，编译能过、下载能跑，一按键就卡死。</p>
+  </div>
+
+  <p>还有一个细节是优先级的位宽。每个中断的优先级寄存器给 4 个二进制位，这 4 位怎么分成抢占和响应，由优先级分组决定。一般保持默认：4 位全部给抢占，响应优先级恒为 0。这次实验就是这种默认。</p>
+
+  <div class="bits four"><span class="on">3</span><span class="on">2</span><span class="on">1</span><span class="on">0</span></div>
+  <p class="bits-cap">4 位全部用于抢占优先级（默认分组）</p>
+</section>
+
+<!-- ================= 09 ================= -->
+<section id="quickref">
+  <div class="secnum">09 / REFERENCE</div>
+  <h2>速查</h2>
+  <p class="sub">把这次改动的地方收在一张表里，下次做类似的按键中断可以对照着来。</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>位置</th><th>设置</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td>PB12</td><td><code>GPIO_EXTI12</code>，User Label 写 KEY1</td><td>让这个引脚走中断线 12</td></tr>
+      <tr><td>GPIO mode</td><td>External Interrupt Mode with Falling edge trigger detection</td><td>按键按下是电平从高变到低</td></tr>
+      <tr><td>GPIO Pull</td><td>Floating</td><td>外部已有 10K 上拉，内部不用再挂</td></tr>
+      <tr><td>NVIC</td><td>EXTI line[15:10] 勾 Enabled，Preemption = 1</td><td>这条中断线才能进入 CPU</td></tr>
+      <tr><td>NVIC</td><td>Time base (SysTick) Preemption = 0</td><td>中断里的 HAL_Delay 要靠 SysTick 推进</td></tr>
+      <tr><td>处理函数</td><td>USER CODE 里先 <code>HAL_Delay(10)</code>、再读引脚、再翻转</td><td>消抖，并且把业务代码放在清挂起位之前</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>容易踩的坑</h3>
+  <ul>
+    <li><strong>引脚配了，NVIC 没勾。</strong>边沿检测和挂起位照常工作，信号到 NVIC 就断了，现象是「按了没反应」。</li>
+    <li><strong>挂起位没清。</strong><code>HAL_GPIO_EXTI_IRQHandler(KEY1_Pin)</code> 被删掉，或者自己写的代码放到了它后面，中断会一直重复进入，看着像「只进一次就再也不动」。</li>
+    <li><strong>没消抖。</strong>一次按压的一串下降沿被当成好几次中断，灯亮暗两下。</li>
+    <li><strong>优先级设反。</strong>中断里调 <code>HAL_Delay</code>，SysTick 进不来，<code>uwTick</code> 不动，一按键就卡死。</li>
+    <li><strong>事件模式当成中断用。</strong>GPIO mode 选成 External Event，信号经脉冲发生器，NVIC 那边收不到任何东西。</li>
+  </ul>
+
+  <p>这套流程放到别的引脚上同样成立：换引脚就换 EXTI 编号，换触发方式就换边沿，其余寄存器链路一模一样。</p>
+
+  <div class="divider"></div>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>本页由《检测 GPIO 电平变化的中断——外部中断》笔记整理而成，插图为笔记原图，视频为实验实拍。</p>
+    <p>STM32 · 外部中断 · EXTI12 按键与 NVIC 优先级 · 上一篇：<a href="uart.html">串口通信</a> · 回到 <a href="index.html">GPIO 的输入与输出</a></p>
+  </div>
+</footer>
+
+<div class="lb" id="lb"><img alt=""></div>
+
+<script>
+(function () {
+  /* ---------- 代码高亮（从 textContent 重建，避免二次转义） ---------- */
+  var KW = /\b(while|if|else|for|return|void|int|uint8_t|uint16_t|uint32_t|break|continue)\b/g;
+  var MACRO = /\b(__HAL_[A-Za-z0-9_]+|HAL_[A-Za-z0-9_]+|GPIO_PIN_[A-Z0-9]+|GPIO_[A-Z]+|[A-Z][A-Z0-9]*_[A-Za-z0-9_]+)\b/g;
+  var NUM = /(?<![A-Za-z_])\b(\d+)\b/g;
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlight(src) {
+    var parts = src.split(/(\/\*[\s\S]*?\*\/|\/\/[^\n]*)/);
+    return parts.map(function (p, i) {
+      if (i % 2 === 1) return '<span class="c">' + esc(p) + '</span>';
+      var s = esc(p);
+      s = s.replace(MACRO, '<span class="m">$1</span>');
+      s = s.replace(KW, '<span class="k">$1</span>');
+      s = s.replace(NUM, '<span class="n">$1</span>');
+      return s;
+    }).join('');
+  }
+
+  document.querySelectorAll('pre > code').forEach(function (el) {
+    el.innerHTML = highlight(el.textContent.replace(/\s+$/, ''));
+  });
+
+  /* ---------- 图片灯箱 ---------- */
+  var lb = document.getElementById('lb');
+  var lbImg = lb.querySelector('img');
+  document.querySelectorAll('figure img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('open');
+    });
+  });
+  function close() { lb.classList.remove('open'); lbImg.src = ''; }
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  /* ---------- 目录高亮 ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var targets = Array.prototype.slice.call(document.querySelectorAll('main section[id], main h3[id]'));
+
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var a = byId[en.target.id];
+      if (!a) return;
+      links.forEach(function (x) { x.classList.remove('active'); });
+      a.classList.add('active');
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+
+  targets.forEach(function (t) { obs.observe(t); });
+
+})();
+</script>
+</body>
+</html>
