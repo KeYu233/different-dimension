@@ -46,6 +46,11 @@ title: Hi!!!我是柯宇！
     <p class="post-item-meta">下降沿触发 · EXTI 与 NVIC · 按键消抖 · 从引脚到向量表</p>
     <p class="post-item-excerpt">HAL_Delay(2000) 让 CPU 原地等两秒，这期间按下的键没有人处理。把方向反过来——让按键去打断主程序：CubeMX 里配哪三处，处理函数怎么写，抖动怎么去掉，一个下降沿从引脚到向量表要经过哪些环节。</p>
   </li>
+  <li class="post-item">
+    <h2 class="post-item-title"><a href="{{ '/stm32/polling.html' | relative_url }}">五、轮询原理与中断模式收发</a></h2>
+    <p class="post-item-meta">轮询的代价 · 中断七步 · 武装与重装 · 七个坑</p>
+    <p class="post-item-excerpt">轮询收两个字节再回显，CPU 在这 0.35 ms 里全归串口所有。改成中断只动 main.c 的四处：缓冲区挪到文件级、初始化时武装一次、回调里解析并重装、清空 while(1)；再附七个上板常踩的坑和五道自测题。</p>
+  </li>
 </ul>
 
 # 无心漫谈

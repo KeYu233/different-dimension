@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>轮询原理与中断模式收发 · 电控学习笔记</title>
+<style>
+:root{
+  --ink:#16202a;
+  --muted:#5d6b78;
+  --faint:#8b98a3;
+  --line:#e4e8eb;
+  --bg:#fcfcfb;
+  --card:#ffffff;
+  --accent:#16607a;
+  --accent-soft:#eaf2f5;
+  --warn:#9a5a12;
+  --warn-soft:#fdf5e8;
+  --code-bg:#f7f8f9;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.78;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px}
+.layout{display:grid; grid-template-columns:206px minmax(0,1fr); gap:56px; align-items:start}
+main{max-width:780px; min-width:0; padding-bottom:40px}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 40px; border-bottom:1px solid var(--line)}
+.kicker{
+  font-size:12px; letter-spacing:.18em; color:var(--faint);
+  text-transform:uppercase; margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(28px,4.2vw,40px); line-height:1.3; font-weight:600;
+  letter-spacing:.01em; margin:0 0 16px;
+}
+.lede{font-size:17px; color:var(--muted); max-width:660px; margin:0 0 26px}
+.facts{display:flex; flex-wrap:wrap; gap:10px 28px; font-size:13.5px; color:var(--muted)}
+.facts b{color:var(--ink); font-weight:600}
+.hero-note{margin-top:22px; font-size:12.5px; color:var(--faint)}
+.hero-note a{color:var(--faint); border-bottom:1px solid var(--line)}
+.hero-note a:hover{color:var(--accent); text-decoration:none; border-bottom-color:var(--accent)}
+
+/* ---------- toc ---------- */
+.toc{position:sticky; top:26px; padding-top:56px; font-size:13.5px}
+.toc-title{font-size:11px; letter-spacing:.16em; color:var(--faint); margin-bottom:12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--line)}
+.toc li a{
+  display:block; padding:5px 0 5px 14px; margin-left:-1px;
+  border-left:2px solid transparent; color:var(--muted); line-height:1.5;
+}
+.toc li a:hover{color:var(--ink); text-decoration:none}
+.toc li a.active{color:var(--accent); border-left-color:var(--accent); font-weight:500}
+.toc li.sub a{padding-left:26px; font-size:12.8px; color:#7b8894}
+
+/* ---------- sections ---------- */
+main > section{padding-top:64px; scroll-margin-top:20px}
+.secnum{
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:12px; letter-spacing:.14em; color:var(--accent); margin-bottom:10px;
+}
+h2{font-size:24px; font-weight:600; margin:0 0 8px; letter-spacing:.01em}
+h3{font-size:17.5px; font-weight:600; margin:40px 0 10px}
+h3::before{content:""; display:inline-block; width:14px; height:1px; background:var(--accent);
+  vertical-align:middle; margin-right:10px; transform:translateY(-2px)}
+h4{font-size:15px; font-weight:600; margin:24px 0 6px; color:var(--ink)}
+p{margin:12px 0}
+.sub{color:var(--muted); font-size:14.5px; margin-top:0}
+ul,ol{margin:12px 0; padding-left:22px}
+li{margin:6px 0}
+li::marker{color:var(--faint)}
+strong{font-weight:600}
+code{
+  font-family:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono",monospace;
+  font-size:.9em; background:#f1f3f4; padding:1px 5px; border-radius:4px;
+  color:#0f3d4d;
+}
+
+/* ---------- figures ---------- */
+figure{margin:26px 0}
+figure img{
+  display:block; width:100%; height:auto; background:#fff;
+  border:1px solid var(--line); border-radius:8px; cursor:zoom-in;
+}
+figure.small img{max-width:520px; margin:0 auto}
+figure.tiny img{max-width:400px; margin:0 auto}
+figcaption{
+  font-size:12.8px; color:var(--faint); text-align:center;
+  margin-top:10px; line-height:1.6;
+}
+.figrow{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:26px 0; align-items:end}
+.figrow figure{margin:0}
+.figrow figcaption{font-size:12.5px}
+.figrow.wide{grid-template-columns:1.35fr 1fr}
+.figrow.narrow{grid-template-columns:1fr 1.35fr}
+.figrow figure img{width:100%}
+
+/* ---------- video ---------- */
+figure.video video{
+  display:block; width:100%; height:auto; max-height:540px; object-fit:contain;
+  background:#0f1519; border:1px solid var(--line); border-radius:8px;
+}
+figure.video.portrait video{max-width:420px; margin:0 auto}
+figure.video figcaption{font-size:12.8px}
+.videotag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-weight:600; font-size:13px; color:var(--muted); border-bottom:1px solid #cfd6db;
+  white-space:nowrap; letter-spacing:.02em}
+tbody tr:hover{background:#fafbfb}
+td code{background:none; padding:0; color:inherit; font-size:13.2px}
+.tnum{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ---------- cards ---------- */
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:22px 0}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:18px 20px; font-size:14.5px; line-height:1.7;
+}
+.card h4{margin:0 0 6px; font-size:14.5px}
+.card p{margin:0; color:var(--muted); font-size:14px}
+.card .tag{
+  display:inline-block; font-size:11px; letter-spacing:.08em; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 9px; margin-bottom:10px;
+}
+.card .tag.warn{color:var(--warn); background:var(--warn-soft)}
+
+/* ---------- callout ---------- */
+.note{
+  margin:24px 0; padding:14px 18px; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 8px 8px 0; font-size:14.5px;
+}
+.note.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.note p{margin:0}
+.note p + p{margin-top:8px}
+.note .lbl{font-weight:600; margin-right:2px; color:var(--accent)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- code ---------- */
+pre{
+  margin:20px 0; padding:16px 18px; background:var(--code-bg);
+  border:1px solid var(--line); border-radius:8px; overflow-x:auto;
+  font-size:13.2px; line-height:1.7;
+}
+pre code{background:none; padding:0; font-size:inherit; color:#22303a}
+.k{color:#8b3fa8}
+.f{color:#16607a}
+.n{color:#a05c11}
+.c{color:#8b98a3; font-style:normal}
+.m{color:#2b6b4f}
+
+/* ---------- misc ---------- */
+.divider{height:1px; background:var(--line); margin:56px 0 0}
+.kv{display:grid; grid-template-columns:132px 1fr; gap:4px 18px; font-size:14.5px; margin:18px 0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+footer{
+  border-top:1px solid var(--line); margin-top:80px; padding:28px 0 60px;
+  font-size:13px; color:var(--faint);
+}
+footer p{margin:4px 0}
+
+/* ---------- lightbox ---------- */
+.lb{
+  position:fixed; inset:0; background:rgba(16,24,30,.9); display:none;
+  align-items:center; justify-content:center; padding:4vw; z-index:50; cursor:zoom-out;
+}
+.lb.open{display:flex}
+.lb img{max-width:100%; max-height:100%; background:#fff; border-radius:6px}
+
+/* ---------- responsive ---------- */
+@media (max-width:960px){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .toc{display:none}
+  .hero{padding:44px 0 30px}
+  .wrap{padding:0 20px}
+  main > section{padding-top:48px}
+  .grid,.grid.three,.figrow{grid-template-columns:1fr}
+  .figrow{gap:26px}
+  h2{font-size:21px}
+  .kv{grid-template-columns:100px 1fr}
+}
+@media print{
+  .toc,.lb{display:none}
+  body{background:#fff}
+  .hero{padding-top:0}
+  main > section{page-break-inside:auto}
+  figure{page-break-inside:avoid}
+}
+
+/* —— 博客返回入口（整进「异乡之翼」时加的，非原文） —— */
+.gf-home{position:fixed; top:14px; right:16px; z-index:60; padding:6px 14px; border-radius:999px;
+  border:1px solid var(--line); background:rgba(255,255,255,.92); color:var(--muted);
+  font-size:12.5px; letter-spacing:.04em; box-shadow:0 2px 10px rgba(22,32,42,.08);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.gf-home:hover{color:var(--accent); border-color:var(--accent); background:#fff}
+@media (max-width:640px){.gf-home{top:10px; right:10px; padding:5px 11px; font-size:12px}}
+@media print{.gf-home{display:none}}</style>
+</head>
+<body>
+
+<a class="gf-home" href="../">&larr; 异乡之翼</a>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">电控学习笔记 · STM32 · 05</div>
+    <h1>轮询原理与中断模式收发</h1>
+    <p class="lede">w3 这个工程现在用轮询收发两个字节，点亮板上的一颗灯。把它改成中断方式，引脚、时钟、串口参数一个都不用动，只改 main.c 的四处。下面先量清轮询的代价，再顺着 HAL 的中断链路把改动逐条走一遍。</p>
+    <div class="facts">
+      <span><b>工程</b> w3 · CubeMX CMake</span>
+      <span><b>芯片</b> STM32F103C8T6 · HSI 8MHz</span>
+      <span><b>串口</b> USART2 · PA2 / PA3 · 115200 8N1</span>
+      <span><b>改动</b> main.c 四处，其余不动</span>
+    </div>
+    <div class="hero-note">整理自《STM32 串口收发：从轮询到中断》学习笔记，基于 E:\Project\w3 的轮询版改造 · 上一篇：<a href="exti.html">外部中断</a></div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+<aside class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#overview">一、工程速览</a></li>
+    <li><a href="#read">二、轮询版逐行读</a></li>
+    <li class="sub"><a href="#timing">一帧的时间账</a></li>
+    <li><a href="#dataflow">三、数据在 USART 里的流向</a></li>
+    <li class="sub"><a href="#dblbuf">双缓冲</a></li>
+    <li class="sub"><a href="#bytrip">一个字节的旅程</a></li>
+    <li class="sub"><a href="#framelen">接收端必须知道帧长</a></li>
+    <li><a href="#cost">四、轮询的代价</a></li>
+    <li class="sub"><a href="#blocking">阻塞说的是状态</a></li>
+    <li class="sub"><a href="#side">另外两个副作用</a></li>
+    <li><a href="#chain">五、中断接管的方式</a></li>
+    <li class="sub"><a href="#vector">一个外设一个中断向量</a></li>
+    <li class="sub"><a href="#judge">IRQHandler 里的判据</a></li>
+    <li class="sub"><a href="#weak">__weak 留的口子</a></li>
+    <li><a href="#rewrite">六、改造：四处改动</a></li>
+    <li class="sub"><a href="#pv">缓冲区挪到文件级</a></li>
+    <li class="sub"><a href="#arm">初始化时武装一次</a></li>
+    <li class="sub"><a href="#callback">回调写在哪</a></li>
+    <li class="sub"><a href="#empty">清空 while(1)</a></li>
+    <li class="sub"><a href="#nvic">中断使能</a></li>
+    <li class="sub"><a href="#onlyit">只调 _IT 版发送</a></li>
+    <li><a href="#rearm">七、武装与重装</a></li>
+    <li class="sub"><a href="#symptom">症状与诊断</a></li>
+    <li class="sub"><a href="#rearmpoint">重装点</a></li>
+    <li><a href="#board">八、上板：改前改后</a></li>
+    <li class="sub"><a href="#verify">四步验证</a></li>
+    <li><a href="#pitfalls">九、七个容易踩的坑</a></li>
+    <li><a href="#limits">十、边界：变长与 DMA</a></li>
+    <li><a href="#quiz">十一、自测题</a></li>
+    <li><a href="#appendix">附录：速查与术语</a></li>
+  </ol>
+</aside>
+
+<main>
+
+<!-- ================= 01 ================= -->
+<section id="overview">
+  <div class="secnum">01 / OVERVIEW</div>
+  <h2>工程速览：w3 现在怎么控制灯</h2>
+  <p class="sub">串口的用法只有三步：收两字节、回显、写引脚。</p>
+
+  <p>w3 是 CubeMX 生成的 CMake 工程，芯片 STM32F103C8T6，时钟走内部 HSI 8 MHz，没有开 PLL。串口用 USART2，PA2 发、PA3 收，115200 bit/s、8 位数据、无校验、1 位停止。板上三个 LED：PA6 红、PA7 蓝、PB0 绿，低电平点亮。</p>
+  <p>协议只有两个字节：第一个是颜色字母 R / G / B，第二个是 1（亮）或 0（灭）。程序收到两个字节后先原样回显，再按第一个字节选灯、按第二个字节决定亮灭。</p>
+  <p>main.c 里只有一个 <code>while(1)</code>，按顺序做四件事：阻塞收两字节、阻塞回显、算出 state、写引脚。这段代码能跑，代价有三条：</p>
+  <ul>
+    <li>一帧的 0.35 ms 里主循环停住，什么都做不了。</li>
+    <li>一次只处理一帧，下一帧必须等这一帧处理完。</li>
+    <li>接收超时写的是 <code>HAL_MAX_DELAY</code>，程序分不清"对方没发"和"自己卡死"。</li>
+  </ul>
+</section>
+
+<!-- ================= 02 ================= -->
+<section id="read">
+  <div class="secnum">02 / READ</div>
+  <h2>轮询版逐行读</h2>
+  <p class="sub">先看清它现在怎么卡住，才知道中断要换掉哪一段。</p>
+
+  <p>去掉和串口无关的部分，现在的 main.c 是这样：</p>
+
+<pre><code>/* USER CODE BEGIN 2 */
+uint8_t receiveData[2];
+/* USER CODE END 2 */
+
+while (1)
+{
+  HAL_UART_Receive(&amp;huart2, receiveData, 2, HAL_MAX_DELAY);
+  HAL_UART_Transmit(&amp;huart2, receiveData, 2, HAL_MAX_DELAY);
+  GPIO_PinState state = GPIO_PIN_SET;
+  if (receiveData[1] == '1') {
+    state = GPIO_PIN_RESET;
+  }
+  if (receiveData[0] == 'R') {
+    HAL_GPIO_WritePin(RED_GPIO_Port, RED_Pin, state);
+  }
+  else if (receiveData[0] == 'G') {
+    HAL_GPIO_WritePin(GREEN_GPIO_Port, GREEN_Pin, state);
+  }
+  else if (receiveData[0] == 'B') {
+    HAL_GPIO_WritePin(BLUE_GPIO_Port, BLUE_Pin, state);
+  }
+  //HAL_UART_Transmit_IT(&amp;huart2, receiveData, 2);
+}</code></pre>
+
+  <p>逐段看：</p>
+  <ul>
+    <li><code>receiveData</code> 写在 USER CODE BEGIN 2 里，是 main 的局部变量。这里能用，是因为 main 不会返回、栈帧一直活着；改中断版时必须挪到文件级，理由放在 6.1 节。</li>
+    <li>两次调用的超时都是 <code>HAL_MAX_DELAY</code>：等不到就一直等。</li>
+    <li><code>HAL_UART_Transmit</code> 把刚收到的两个字节原样发回去，这就是回显。它同样阻塞，2 字节又是 174 µs。</li>
+    <li>state 初值是 <code>GPIO_PIN_SET</code>（灭），第二个字节为 '1' 时改成 <code>GPIO_PIN_RESET</code>。这块板子低电平点亮：发 R1 才亮，发 R0 灭。改成中断版，这个极性要原样保留。</li>
+    <li>三个分支按第一个字节选引脚：R → PA6，G → PB0，B → PA7。<code>GREEN_GPIO_Port</code> 是 GPIOB，RED 和 BLUE 在 GPIOA，跨了两个端口。</li>
+    <li>末尾那行被注释掉的 <code>HAL_UART_Transmit_IT</code> 说明只把发送换成非阻塞版没有用：接收还卡在上一行的 <code>HAL_UART_Receive</code> 上，主循环照样出不来。</li>
+  </ul>
+
+  <h3 id="timing">一帧的时间账</h3>
+  <p>115200 bit/s 下一位 8.68 µs，一个 10 位的帧（1 起始 + 8 数据 + 1 停止）86.8 µs。收 2 个字节 173.6 µs，回显再发 2 个字节 173.6 µs，一帧合计约 0.35 ms，全程 CPU 都耗在这两行里。</p>
+  <p>这颗芯片跑在 8 MHz 上，0.35 ms 相当于两千八百多个时钟周期。每来一帧，CPU 就有这么长一段时间只能盯着串口。</p>
+
+  <div class="note">
+    <p><span class="lbl">算一遍：</span>2 × 10 bit ÷ 115200 = 173.6 µs，收发各一遍，347 µs。串口慢是物理决定的，改代码改不掉。</p>
+  </div>
+</section>
+
+<!-- ================= 03 ================= -->
+<section id="dataflow">
+  <div class="secnum">03 / DATAFLOW</div>
+  <h2>数据在 USART 里的流向</h2>
+  <p class="sub">中断能接手，靠的是 TDR 和 RDR 这两级缓冲。</p>
+
+  <p>要看懂中断为什么能接手，先得看清 USART 里面有几个零件。最小配置是四个寄存器：发送方向的 TDR 和发送移位寄存器，接收方向对称，接收移位寄存器和 RDR，另有一个波特率发生器给两条移位通道提供采样时钟。</p>
+
+  <h3 id="dblbuf">双缓冲：两个寄存器各管一段</h3>
+  <p>移位寄存器做的是慢活：一位一位地搬，速度由波特率定死。只有它的话，CPU 就得等它搬空才能写下一个字节，慢活就变成了 CPU 自己的慢活。</p>
+  <p>TDR 是那道缓冲。CPU 把字节写进 TDR 就可以走（只要 TXE 还是 1），硬件在移位寄存器腾空的瞬间把 TDR 的内容搬过去。"CPU 写"和"线路发"于是成了两条并行的时间线，中断能插进来，就插在这个缝里。</p>
+  <p>RDR 是反过来的同一个道理：硬件把收满的字节放进 RDR，CPU 什么时候来取都行，只要赶在下一次收满之前，否则触发 ORE 溢出。</p>
+
+  <figure>
+    <img src="assets/polling/fig1.png" alt="USART2 内部数据通路：CPU 经 TDR 与发送移位寄存器串出 TX，RX 经接收移位寄存器进 RDR">
+    <figcaption>慢的是移位寄存器，TDR 和 RDR 只是给 CPU 用的中转站。CPU 写进 TDR 就能走，硬件在移位寄存器腾空时再来搬。</figcaption>
+  </figure>
+
+  <h3 id="bytrip">一个具体字节的旅程</h3>
+  <p>以 'R' 为例：ASCII 是 0x52，二进制 0101 0010。这个字节写进 TDR，搬进移位寄存器，然后低位先出，线上依次出现 0 1 0 0 1 0 1 0，前后各加一个起始位（低）和一个停止位（高）。115200 bit/s 下每位 8.68 µs，10 位一帧 86.8 µs。</p>
+
+  <h3 id="framelen">接收端必须知道帧长</h3>
+  <p>发送多少由 CPU 定，接收多少由对方定，这是串口最别扭的地方。线上的电平只说明"来了一位"，没有哪里写着"这一帧到此为止"。轮询版靠 Size 数着收；中断版同样要 Size，只是数数的人从 CPU 换成了 HAL：每进一次中断搬一个字节、计数器减一，减到零才算这次接收完成，才去调回调。</p>
+  <p>只发 1 个字节时，<code>HAL_UART_Receive_IT(&amp;huart2, receiveData, 2)</code> 的回调不会进来：它承诺的是收满 2 个，来 1 个就安静收下 1 个，然后继续等剩下 1 个。这也是协议必须是定长两字节的原因。</p>
+</section>
+
+<!-- ================= 04 ================= -->
+<section id="cost">
+  <div class="secnum">04 / COST</div>
+  <h2>轮询的代价</h2>
+  <p class="sub">这 0.35 ms 里，CPU 归串口所有。</p>
+
+  <p>把上面那两行拆开看：<code>HAL_UART_Receive</code> 从进门到返回，中间只有一个 while，反复查 RXNE 和超时；<code>HAL_UART_Transmit</code> 同理，查 TXE 和 TC。函数返回之前，<code>while(1)</code> 里后面的代码一行都不会执行。</p>
+
+  <figure>
+    <img src="assets/polling/fig2.png" alt="收一帧 2 字节的 CPU 时间线对比：轮询整段占用，中断只在字节到齐时打断几微秒">
+    <figcaption>同样收一帧 2 个字节，两种做法的 CPU 时间线。上格是轮询：整段 0.17 ms 全被占用；下格是中断：每个字节到齐的瞬间打断几微秒，其余时间主循环自由。</figcaption>
+  </figure>
+
+  <h3 id="blocking">阻塞说的是状态</h3>
+  <p>阻塞说的是状态，不是时长：CPU 一直在等，程序因此无法向下执行。串口本身就慢，一帧 0.35 ms，物理决定，改不了。代价是这 0.35 ms 里 CPU 做不了别的事：这颗芯片跑 8 MHz，够扫一遍按键、刷半屏显示，或者跑几个周期的控制环。</p>
+
+  <h3 id="side">另外两个副作用</h3>
+  <ul>
+    <li><strong>吞吐被这一帧卡住</strong>：处理完才能收下一帧。串口助手连发三帧，第二、三帧在线上等着，对方发得快，最先丢的是数据。</li>
+    <li><strong>无法判断对方是否在线</strong>：<code>HAL_MAX_DELAY</code> 让 <code>HAL_UART_Receive</code> 永不超时。程序停在这一行时，和死机在现象上没有区别。</li>
+  </ul>
+</section>
+
+<!-- ================= 05 ================= -->
+<section id="chain">
+  <div class="secnum">05 / CHAIN</div>
+  <h2>中断接管的方式</h2>
+  <p class="sub">轮询是"我现在就去取"，中断是"我先登记，够了再叫我"。</p>
+
+  <p>中断接收和轮询接收的分工不一样。轮询是"我现在就去取"，中断是"我先登记，之后每来一个字节由硬件接手，够了再叫我"。叫你的这条路径一共七步。</p>
+
+  <figure>
+    <img src="assets/polling/fig3.png" alt="从中断触发到用户回调的七步链路：RXNE 置位、NVIC、USART2_IRQHandler、HAL_UART_IRQHandler、UART_Receive_IT、回调">
+    <figcaption>七步里只有最后一步是你写的函数，前面六步由硬件、NVIC 和 HAL 完成。</figcaption>
+  </figure>
+
+  <h3 id="vector">一个外设只有一个中断向量</h3>
+  <p>w3 的 Core/Src/stm32f1xx_it.c 里已经有这一段：</p>
+
+<pre><code>void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&amp;huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+  /* USER CODE END USART2_IRQn 1 */
+}</code></pre>
+
+  <p>它能出现在生成代码里，说明 .ioc 中 NVIC → USART2 global interrupt 已经勾上了。这个函数只有一句实际调用，是因为每个 USART 只有一个中断向量：发送寄存器空、发送完成、收到数据、各种错误，这么多事件在 NVIC 里只占一个编号。中断服务函数没法知道你为什么进来，只能再读一次 SR。<code>HAL_UART_IRQHandler</code> 存在的理由就是这个，它进门第一件事就是读 SR。</p>
+
+  <h3 id="judge">HAL_UART_IRQHandler 里的判据</h3>
+  <p>判据就这几行（原文照抄，注释删了）：</p>
+
+<pre><code>uint32_t isrflags   = READ_REG(huart->Instance-&gt;SR);
+uint32_t cr1its     = READ_REG(huart->Instance-&gt;CR1);
+uint32_t errorflags = 0x00U;
+
+errorflags = (isrflags &amp; (uint32_t)(USART_SR_PE | USART_SR_FE |
+                                    USART_SR_ORE | USART_SR_NE));
+if (errorflags == RESET)
+{
+  /* UART in mode Receiver ------------------------------------- */
+  if (((isrflags &amp; USART_SR_RXNE) != RESET) &amp;&amp;
+      ((cr1its &amp; USART_CR1_RXNEIE) != RESET))
+  {
+    UART_Receive_IT(huart);
+    return;
+  }
+}
+/* 下面依次是 PE / FE / NE / ORE 各错误分支 …… */</code></pre>
+
+  <p>顺序是：</p>
+  <ul>
+    <li>先读 SR 和 CR1。SR 里是发生了什么，CR1 里是你允许了哪些，两边同时成立才算数。</li>
+    <li>错误先判（PE 校验错、FE 帧错、ORE 溢出、NE 噪声）。有错就走错误分支，不搬数据——出错的那个字节本来就不可信。</li>
+    <li>RXNE &amp;&amp; RXNEIE 才是"收到数据且你开了接收中断"。满足就调 <code>UART_Receive_IT(huart)</code> 并立刻 return。这个 return 保证一次中断只处理一件事。</li>
+    <li><code>UART_Receive_IT</code> 不带 <code>HAL_</code> 前缀，它是 HAL 内部的 static 函数，不给你调。你只需要知道它做三件事：搬一个字节、计数减一、减到零调回调。</li>
+  </ul>
+
+  <h3 id="weak">回调：__weak 留的口子</h3>
+  <p>HAL 库在 stm32f1xx_hal_uart.c 末尾声明了两个 <code>__weak</code> 空函数：</p>
+
+<pre><code>__weak void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(huart);
+  /* NOTE: This function should not be modified, when the callback is needed,
+           the HAL_UART_TxHalfCpltCallback could be implemented in the user file */
+}
+
+__weak void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  UNUSED(huart);
+  /* NOTE: This function should not be modified, when the callback is needed,
+           the HAL_UART_RxCpltCallback could be implemented in the user file */
+}</code></pre>
+
+  <p><code>__weak</code> 是弱符号：库里这个定义只占位。你在自己的文件里写个同名函数（不带 <code>__weak</code>），链接器就用你的、丢掉库里的。反过来，改库文件里那份是自找麻烦——下次 CubeMX 重新生成，整个 stm32f1xx_hal_uart.c 会被覆盖回去。</p>
+</section>
+
+<!-- ================= 06 ================= -->
+<section id="rewrite">
+  <div class="secnum">06 / REWRITE</div>
+  <h2>改造：四处改动</h2>
+  <p class="sub">缓冲区、武装、回调、主循环，只动这四处。</p>
+
+  <p>把 w3 从轮询改成中断，main.c 里只需要动四个地方，引脚、时钟、串口参数一个都不用碰。Core/Src/stm32f1xx_it.c 也不用改——<code>USART2_IRQHandler</code> 已经在了。</p>
+
+  <h3 id="pv">6.1　第一处：缓冲区挪到文件级</h3>
+  <p>现在 <code>receiveData</code> 是 main 的局部变量。对轮询版没影响，但中断是异步来的，回调执行时 main 可能正停在任意一行；HAL 存的是这个数组的地址，能否一直有效，取决于"main 的栈帧永远不回收"这个隐含前提，编译器还有权把它优化进寄存器或复用。挪到文件级是零成本的保险：</p>
+
+<pre><code>/* USER CODE BEGIN PV */
+uint8_t receiveData[2];        /* 中断里要访问，放到文件级 */
+/* USER CODE END PV */</code></pre>
+
+  <p>同时把 USER CODE BEGIN 2 里那行 <code>uint8_t receiveData[2];</code> 删掉，否则会重名。</p>
+
+  <h3 id="arm">6.2　第二处：初始化时武装一次</h3>
+  <p>把 USER CODE BEGIN 2 里的收发代码换成一句：</p>
+
+<pre><code>/* USER CODE BEGIN 2 */
+HAL_UART_Receive_IT(&amp;huart2, receiveData, 2);   /* 只在这里武装一次 */
+/* USER CODE END 2 */</code></pre>
+
+  <p>这一句不搬数据，只做登记：把数组地址、长度 2 写进 huart2，打开 RXNEIE，然后立刻返回。从此每来一个字节，硬件触发一次中断，由 HAL 计数；满 2 个才调回调。</p>
+
+  <h3 id="callback">6.3　第三处：把回调写在 USER CODE BEGIN 4</h3>
+  <p>回调放在 main.c 末尾的 USER CODE BEGIN 4 里，抄的是这个工程自己的逻辑，引脚名一个没换：</p>
+
+<pre><code>/* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  /* 1. 回显：用 _IT 版，中断里不能阻塞 */
+  HAL_UART_Transmit_IT(&amp;huart2, receiveData, 2);
+
+  /* 2. 解析：第 1 字节选灯，第 2 字节定亮灭（低电平点亮） */
+  GPIO_PinState state = (receiveData[1] == '1') ? GPIO_PIN_RESET : GPIO_PIN_SET;
+  switch (receiveData[0]) {
+  case 'R': HAL_GPIO_WritePin(RED_GPIO_Port,   RED_Pin,   state); break;
+  case 'G': HAL_GPIO_WritePin(GREEN_GPIO_Port, GREEN_Pin, state); break;
+  case 'B': HAL_GPIO_WritePin(BLUE_GPIO_Port,  BLUE_Pin,  state); break;
+  default:  break;
+  }
+
+  /* 3. 重新武装：不写这一句，就只收得到第一帧 */
+  HAL_UART_Receive_IT(&amp;huart2, receiveData, 2);
+}
+/* USER CODE END 4 */</code></pre>
+
+  <p>改动里有两处容易照抄错：state 的极性不能反（这块板子是 '1' 写 RESET 点亮），GREEN 在 GPIOB，RED 和 BLUE 在 GPIOA，两个端口都要写到。</p>
+  <p>工程里只有一个串口，所以省掉了 <code>if (huart-&gt;Instance != USART2) return;</code> 这一句判断；以后加了 USART1 / USART3，回调会被它们共用，就要把这句加回来，否则别的串口收完数据也会跑这里的逻辑。</p>
+
+  <h3 id="empty">6.4　第四处：清空 while(1)</h3>
+
+<pre><code>/* USER CODE BEGIN WHILE */
+while (1)
+{
+  /* 收发已经交给中断，这里放别的任务：按键扫描、显示刷新、控制环 */
+  /* USER CODE END WHILE */
+}</code></pre>
+
+  <p>原来那 10 行收发代码整段删掉。删完主循环是空的；空出来的时间就是这次改造要的东西。</p>
+
+  <h3 id="nvic">6.5　中断使能：这个工程已经开着</h3>
+  <p>新建工程时要在 CubeMX 的 System Core → NVIC 里勾上 USART2 global interrupt，位置见下图。w3 不需要这一步：stm32f1xx_it.c 里已经生成了 <code>USART2_IRQHandler</code>，说明 .ioc 里这一项本来就是勾上的。</p>
+
+  <figure>
+    <img src="assets/polling/fig4.png" alt="CubeMX 的 NVIC 选项卡，红框处是 USART2 global interrupt 的使能勾选">
+    <figcaption>CubeMX 的 NVIC 选项卡。红框处即 USART2 global interrupt，Enabled 列打勾后该串口的中断才会进到 CPU。</figcaption>
+  </figure>
+
+  <p>漏勾的后果很隐蔽：程序能编译、能下载、能跑，<code>HAL_UART_Receive_IT</code> 也返回 HAL_OK，但中断永远不触发，回调永远不进来。表现出来只是"发数据没反应"，很容易让人怀疑半天硬件。</p>
+
+  <h3 id="onlyit">6.6　中断里只调 _IT 版发送</h3>
+  <p>回调跑在中断上下文里，主程序被它打断。在这里调阻塞版的 <code>HAL_UART_Transmit</code>，等于在中断里再站 174 µs，这期间主循环停摆，别的中断（包括串口自己的下一次接收）也被挡住。回显用 <code>HAL_UART_Transmit_IT</code>：登记一下就返回，发完再进 <code>TxCpltCallback</code>。</p>
+  <p>回调里也不要 <code>HAL_Delay</code>、等标志或跑长循环。中断里只做搬数据、置标志这类短活，重活留给主循环。</p>
+</section>
+
+<!-- ================= 07 ================= -->
+<section id="rearm">
+  <div class="secnum">07 / REARM</div>
+  <h2>武装与重装</h2>
+  <p class="sub">_IT 版只承诺一次，收满就失效。</p>
+
+  <p><code>HAL_UART_Receive_IT</code> 的 <code>_IT</code> 说的是用中断方式接收，但它只承诺一次：收满 Size 个字节，这次接收就结束，中断使能随之失效。要收下一帧，得重新登记。</p>
+
+  <figure>
+    <img src="assets/polling/fig5.png" alt="武装与重装的状态机：初始化武装一次，每字节中断计数，收满进回调，回调末尾再武装">
+    <figcaption>武装与重装的状态机。武装后每来一个字节在中断里计数，收满 Size 个进入回调；回调末尾那句 <code>HAL_UART_Receive_IT</code> 把状态机带回起点。忘记重装，RXNEIE 就一直是 0，中断不再产生，现象是"只收到第一帧"。</figcaption>
+  </figure>
+
+  <h3 id="symptom">症状与诊断</h3>
+  <p>"忘记重装"这个 bug 难查，因为它不报错：</p>
+  <ul>
+    <li>第一次发 R1，灯亮、回显正常，看起来成功了。</li>
+    <li>第二次发 R0，没有反应，串口助手什么都收不到。</li>
+    <li>重新上电，又只管第一次。</li>
+  </ul>
+  <p>诊断办法：回调里翻转一个 LED 或者打个断点，看它是每帧进一次还是只进一次。只进一次就是没重装；一次都不进，就是 NVIC 没勾或者 Size 和实际帧长对不上。</p>
+
+  <h3 id="rearmpoint">重装点只能放在回调里</h3>
+  <p>把 <code>HAL_UART_Receive_IT</code> 放进 <code>while(1)</code> 看起来也能跑，时序上是错的：主循环比串口快得多，数据还没收完它就会反复调用，每次都把计数清零、把 RxState 重置，结果就是"上一次的数据还没接收完，就又开启了新的接收"。</p>
+  <p>正确的重装点只有一处：上一帧确实收完的地方，也就是回调末尾。谁结束了这次传输，谁负责开下一次。</p>
+</section>
+
+<!-- ================= 08 ================= -->
+<section id="board">
+  <div class="secnum">08 / BOARD</div>
+  <h2>上板：改前改后</h2>
+  <p class="sub">敲 R1、R0、G1、B1，看灯和回显。</p>
+
+  <p>串口助手设 115200、8 位、无校验、1 位停止，发送框里敲两个字符：R1、R0、G1、B1。每发一组，对应的灯亮或灭，接收区同时出现同样的两个字节。</p>
+
+  <figure>
+    <img src="assets/polling/fig6.png" alt="上板现象：左侧学习板的 RGB 灯，右侧串口助手的发送与接收记录">
+    <figcaption>上板现象。左侧是学习板的 RGB 灯，右侧是串口助手：发送区依次是 B1、R1、G1，接收区原样回显，两侧时间戳对得上。</figcaption>
+  </figure>
+
+  <p>中断版跑起来应该看不出区别。看不出区别就说明改对了：功能一样，主循环自由了。连续发十组，每一帧都得处理，而不是只处理第一帧。</p>
+
+  <h3 id="verify">自己验证的四步</h3>
+  <ul>
+    <li><strong>第 1 步，先发一个。</strong>发 R1，看红灯是否亮。亮说明"收 + 解析 + 写引脚"这条链通了。</li>
+    <li><strong>第 2 步，再发一次。</strong>再发 R0，红灯应灭。这一步专治"忘记重装"，没反应就回去看第七节。</li>
+    <li><strong>第 3 步，看回显。</strong>接收区应出现与发送内容一致的 2 个字节。没有回显但有动作，说明解析通了而 Transmit_IT 那一步有问题。</li>
+    <li><strong>第 4 步，拆开发。</strong>把 R 和 1 分两次发送，间隔几百毫秒。仍然正常，说明"收满 2 个才回调"在起作用；如果把 Size 写成 1，这里就会拆成两次回调、灯的反应也会分成两半。</li>
+  </ul>
+</section>
+
+<!-- ================= 09 ================= -->
+<section id="pitfalls">
+  <div class="secnum">09 / PITFALLS</div>
+  <h2>七个容易踩的坑</h2>
+  <p class="sub">表按 w3 这个工程整理，上板出问题时对着查。</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>现象</th><th>原因</th><th>正确做法</th></tr></thead>
+    <tbody>
+      <tr><td>灯亮灭反了：发 1 灭、发 0 亮</td><td>这块板低电平点亮，state 的极性和硬件反了</td><td>'1' 对应 <code>GPIO_PIN_RESET</code>；换板子先确认共阳还是共阴</td></tr>
+      <tr><td>第二次发数据没反应，重新上电又能收一次</td><td>回调里忘了再次调用 <code>HAL_UART_Receive_IT</code>，RXNEIE 已失效</td><td>回调末尾重装；重装点只在"上一帧收完"处</td></tr>
+      <tr><td>偶尔收到数据、偶尔乱，或数据被改写</td><td><code>receiveData</code> 还留在 USER CODE BEGIN 2，是 main 的局部变量</td><td>挪到 USER CODE BEGIN PV，用文件级数组</td></tr>
+      <tr><td><code>HAL_UART_Receive_IT</code> 返回 HAL_BUSY</td><td>上一次接收还没完成就又武装了，典型是在 <code>while(1)</code> 里反复调</td><td>只在初始化时武装一次，之后只在回调里重装</td></tr>
+      <tr><td>编译通过、下载成功，但回调永远不进</td><td>CubeMX 的 NVIC 里没勾 USART2 global interrupt</td><td>System Core → NVIC 勾上并重新生成</td></tr>
+      <tr><td>改了 HAL 库里的回调，下次生成代码就没了</td><td>用户代码写进了 stm32f1xx_hal_uart.c</td><td>利用 <code>__weak</code>：在 main.c 重写同名函数</td></tr>
+      <tr><td>主循环变卡、其他中断响应变慢</td><td>在回调里调了阻塞版 <code>HAL_UART_Transmit</code> 或 <code>HAL_Delay</code></td><td>中断里只用 _IT 版；重活丢给主循环</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>定长接收也是这套做法的边界：<code>_IT</code> 版解决的是收满固定字节数的阻塞，项目里数据往往变长（一帧 JSON、一条 AT 指令、一包蓝牙数据），Size 没法事先写死。</p>
+</section>
+
+<!-- ================= 10 ================= -->
+<section id="limits">
+  <div class="secnum">10 / LIMITS</div>
+  <h2>边界：变长与 DMA</h2>
+  <p class="sub">定长是这一版的边界，变长和 DMA 是下一步。</p>
+
+  <p>改造到这里，w3 的串口收发不再堵塞：收和发都换成了 <code>_IT</code> 版，<code>while(1)</code> 空出来了。剩下两个问题还没解决：</p>
+  <ul>
+    <li><strong>变长接收。</strong>协议现在是死的两字节，改成不定长就得另找判帧尾的办法。</li>
+    <li><strong>进一步降低 CPU 占用。</strong>每来一个字节仍要进一次中断，115200 下 87 µs 一次，波特率再高就会很密。</li>
+  </ul>
+  <p>两个方向的解法是现成的：<code>HAL_UARTEx_ReceiveToIdle</code> 用空闲中断判帧尾，天然支持变长；DMA 让硬件把数据直接搬进内存，连中断都省了。这两条都建立在这一版的基础上。</p>
+</section>
+
+<!-- ================= 11 ================= -->
+<section id="quiz">
+  <div class="secnum">11 / QUIZ</div>
+  <h2>自测题</h2>
+  <p class="sub">五道题，答案跟在后面。</p>
+
+  <p><strong>Q1</strong>　w3 收一帧（2 字节）再加回显，CPU 大约被占用多久？怎么算的？</p>
+  <p><strong>答</strong>　约 0.35 ms。收 2 字节与回显 2 字节各 2 × 10 bit ÷ 115200 = 173.6 µs，两段相加约 347 µs。</p>
+
+  <p><strong>Q2</strong>　<code>receiveData</code> 为什么不能留在 USER CODE BEGIN 2 里？</p>
+  <p><strong>答</strong>　那是 main 的局部变量。中断异步进入回调时 HAL 会往这个地址写数据，能否有效取决于 main 的栈帧一直不回收，编译器也可能把它优化掉。放到 PV 是零成本保险。</p>
+
+  <p><strong>Q3</strong>　<code>HAL_UART_Receive_IT(&amp;huart2, receiveData, 2)</code> 调用之后，函数内部做了什么？</p>
+  <p><strong>答</strong>　不搬数据。它把数组地址与长度 2 记进 huart2，清状态，打开 RXNEIE，然后立即返回。搬运发生在每次 RXNE 中断里，由 <code>UART_Receive_IT</code> 完成。</p>
+
+  <p><strong>Q4</strong>　w3 的 stm32f1xx_it.c 里为什么已经有 <code>USART2_IRQHandler</code>？</p>
+  <p><strong>答</strong>　因为 .ioc 里勾了 USART2 global interrupt。CubeMX 只为使能了的中断生成服务函数，所以这一版不用回头改 CubeMX 配置。</p>
+
+  <p><strong>Q5</strong>　只收到第一帧数据，之后再也收不到，最可能的原因是什么？</p>
+  <p><strong>答</strong>　回调里没有再次调用 <code>HAL_UART_Receive_IT</code>。<code>_IT</code> 版一次只承诺收满一次，收满后中断使能失效。</p>
+</section>
+
+<!-- ================= APPENDIX ================= -->
+<section id="appendix">
+  <div class="secnum">A / APPENDIX</div>
+  <h2>附录：函数与标志速查、术语表</h2>
+  <p class="sub">对上板调试时最常查的几张表。</p>
+
+  <h3>A.1　HAL 串口函数</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>函数</th><th>作用</th><th>会不会阻塞</th></tr></thead>
+    <tbody>
+      <tr><td><code>HAL_UART_Transmit(huart, buf, Size, Timeout)</code></td><td>轮询发送 Size 个字节</td><td>是，整段占用 CPU</td></tr>
+      <tr><td><code>HAL_UART_Receive(huart, buf, Size, Timeout)</code></td><td>轮询接收 Size 个字节</td><td>是，收不满就等</td></tr>
+      <tr><td><code>HAL_UART_Transmit_IT(huart, buf, Size)</code></td><td>登记发送，发完进 TxCpltCallback</td><td>否，立即返回</td></tr>
+      <tr><td><code>HAL_UART_Receive_IT(huart, buf, Size)</code></td><td>登记接收，收满进 RxCpltCallback</td><td>否，立即返回</td></tr>
+      <tr><td><code>HAL_UART_IRQHandler(huart)</code></td><td>中断总入口，读 SR 分发事件</td><td>在中断上下文执行</td></tr>
+      <tr><td><code>HAL_UART_RxCpltCallback(huart)</code></td><td>接收完成回调，用户重写</td><td>在中断上下文执行</td></tr>
+      <tr><td><code>HAL_UART_TxCpltCallback(huart)</code></td><td>发送完成回调，用户可重写</td><td>在中断上下文执行</td></tr>
+      <tr><td><code>HAL_UART_TxHalfCpltCallback(huart)</code></td><td>发送过半回调</td><td>在中断上下文执行</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>A.2　寄存器与标志</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>名字</th><th>全称 / 含义</th><th>在这套机制里的角色</th></tr></thead>
+    <tbody>
+      <tr><td>TDR</td><td>Transmit Data Register，发送数据寄存器</td><td>CPU 写入待发字节的缓冲</td></tr>
+      <tr><td>RDR</td><td>Receive Data Register，接收数据寄存器</td><td>硬件放收满字节的缓冲</td></tr>
+      <tr><td>SR</td><td>Status Register，状态寄存器</td><td><code>HAL_UART_IRQHandler</code> 靠它分辨事件</td></tr>
+      <tr><td>CR1</td><td>Control Register 1</td><td>看 RXNEIE 等中断使能位</td></tr>
+      <tr><td>TXE</td><td>Transmit data register Empty</td><td>TDR 空，可以写下一个字节</td></tr>
+      <tr><td>TC</td><td>Transmission Complete</td><td>整帧发完，<code>HAL_UART_Transmit</code> 靠它返回</td></tr>
+      <tr><td>RXNE</td><td>Read data register Not Empty</td><td>RDR 里有数据，触发接收中断</td></tr>
+      <tr><td>ORE / FE / PE / NE</td><td>溢出 / 帧错 / 校验错 / 噪声</td><td>错误分支先于数据分支处理</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>A.3　术语表</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>术语</th><th>解释</th></tr></thead>
+    <tbody>
+      <tr><td>阻塞 / 非阻塞</td><td>函数在完成前是否占住 CPU。轮询版阻塞，<code>_IT</code> 版非阻塞。</td></tr>
+      <tr><td>轮询（polling）</td><td>CPU 反复查标志位来判断外设状态。</td></tr>
+      <tr><td>中断（interrupt）</td><td>外设通过 NVIC 打断 CPU，让 CPU 转去执行中断服务函数。</td></tr>
+      <tr><td>回调（callback）</td><td>HAL 在事件发生时反过来调用你写的函数，<code>__weak</code> 是它的实现方式。</td></tr>
+      <tr><td>武装 / 重装</td><td>调用 <code>HAL_UART_Receive_IT</code> 登记一次接收；收满后需重新登记。</td></tr>
+      <tr><td>中断上下文</td><td>中断服务函数里的执行环境：不能阻塞、不能长时间占用。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="divider"></div>
+</section>
+
+</main>
+</div>
+</div>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>本页由《STM32 串口收发：从轮询到中断》学习笔记整理，示意图为笔记原图，截图为工程实录。工程 w3 · STM32F103C8T6 · USART2 · 115200 8N1。</p>
+    <p>STM32 · 轮询与中断 · 上一篇：<a href="exti.html">外部中断</a> · 相关：<a href="uart.html">串口通信</a> · 返回栏目：<a href="../diankong-biji.html">《电控学习笔记》</a></p>
+  </div>
+</footer>
+
+<div class="lb" id="lb"><img alt=""></div>
+
+<script>
+(function () {
+  /* ---------- 代码高亮（从 textContent 重建，避免二次转义） ---------- */
+  var KW = /\b(while|if|else|for|return|void|int|uint8_t|uint16_t|uint32_t|break|continue)\b/g;
+  var MACRO = /\b(HAL_[A-Za-z_]+|GPIO_PIN_(?:SET|RESET)|GPIO_PIN_\d+|GPIOC|GPIOA)\b/g;
+  var NUM = /(?<![A-Za-z_])\b(\d+)\b/g;
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlight(src) {
+    var parts = src.split(/(\/\/[^\n]*)/);
+    return parts.map(function (p, i) {
+      if (i % 2 === 1) return '<span class="c">' + esc(p) + '</span>';
+      var s = esc(p);
+      s = s.replace(MACRO, '<span class="m">$1</span>');
+      s = s.replace(KW, '<span class="k">$1</span>');
+      s = s.replace(NUM, '<span class="n">$1</span>');
+      return s;
+    }).join('');
+  }
+
+  document.querySelectorAll('pre > code').forEach(function (el) {
+    el.innerHTML = highlight(el.textContent.replace(/\s+$/, ''));
+  });
+
+  /* ---------- 图片灯箱 ---------- */
+  var lb = document.getElementById('lb');
+  var lbImg = lb.querySelector('img');
+  document.querySelectorAll('figure img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('open');
+    });
+  });
+  function close() { lb.classList.remove('open'); lbImg.src = ''; }
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  /* ---------- 目录高亮 ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var targets = Array.prototype.slice.call(document.querySelectorAll('main section[id], main h3[id]'));
+
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var a = byId[en.target.id];
+      if (!a) return;
+      links.forEach(function (x) { x.classList.remove('active'); });
+      a.classList.add('active');
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+
+  targets.forEach(function (t) { obs.observe(t); });
+
+})();
+</script>
+</body>
+</html>
