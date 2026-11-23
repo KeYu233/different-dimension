@@ -6,7 +6,7 @@ permalink: /diankong-biji/
 
 <p class="column-intro">长期坑，不定期更新，个人笔记。</p>
 
-<h2 class="chapter-heading">篇目<span class="chapter-count">共 5 篇</span></h2>
+<h2 class="chapter-heading">篇目<span class="chapter-count">共 6 篇</span></h2>
 
 <ul class="post-list">
   <li class="post-item">
@@ -33,6 +33,11 @@ permalink: /diankong-biji/
     <h2 class="post-item-title"><a href="{{ '/stm32/polling.html' | relative_url }}">五、轮询原理与中断模式收发</a></h2>
     <p class="post-item-meta">轮询的代价 · 中断七步 · 武装与重装 · 七个坑</p>
     <p class="post-item-excerpt">轮询收两个字节再回显，CPU 在这 0.35 ms 里全归串口所有。改成中断只动 main.c 的四处：缓冲区挪到文件级、初始化时武装一次、回调里解析并重装、清空 while(1)；再附七个上板常踩的坑和五道自测题。</p>
+  </li>
+  <li class="post-item">
+    <h2 class="post-item-title"><a href="{{ '/stm32/code.html' | relative_url }}">六、收发部分的代码整理</a></h2>
+    <p class="post-item-meta">普通收发 · 四个接收函数 · 两个发送函数 · 回调时机</p>
+    <p class="post-item-excerpt">串口的收发接口按「谁等结果」分成两套：普通版把 CPU 押在函数里等到超时，中断与 DMA 版登记一次就返回、结果从回调里出来。把两套接口、各自对应的回调、以及回调到底在什么时候进，整理成一张能查的表。</p>
   </li>
 </ul>
 
